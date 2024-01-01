@@ -6,7 +6,7 @@ import static java.lang.Math.sin;
 public class Util {
     public static float SCR_W, SCR_H, CAM_YAW = 0.0f;
     public static final float SCR_Y = 1000.0f;
-    public static final Vector OBS = new Vector(0,800,450);
+    public static final Vector PLAYER = new Vector(0,800,450), OBS = new Vector(0.0f,0.0f,0.0f);
 
     public static class Vector {
         public float x, y, z;
@@ -14,6 +14,10 @@ public class Util {
             this.x=x;
             this.y=y;
             this.z=z;
+        }
+
+        public double sqlen() {
+            return x*x + y*y + z*z;
         }
     }
     public static Vector mult(Vector v, float k){
@@ -67,5 +71,20 @@ public class Util {
         float z2 = (float) (u2.x*sin(ang) + u2.z*cos(ang));
         Vector u3 = new Vector(x2,u2.y,z2);
         return add(u3,o);
+    }
+
+    public static Vector getNormal(Vector ...points) {
+        Vector point1 = points[0], point2 = points[1], point3 = points[2];
+        Vector edge1 = sub(point2, point1);
+        Vector edge2 = sub(point3, point1);
+        float normalX = edge1.y * edge2.z - edge1.z * edge2.y;
+        float normalY = edge1.z * edge2.x - edge1.x * edge2.z;
+        float normalZ = edge1.x * edge2.y - edge1.y * edge2.x;
+        Vector norm = new Vector(normalX, normalY, normalZ);
+        double d = norm.sqlen();
+        if(d==0.0){
+            System.exit(0);
+        }
+        return div(norm, (float)(Math.sqrt(d)));
     }
 }

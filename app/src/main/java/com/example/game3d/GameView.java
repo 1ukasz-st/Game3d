@@ -1,6 +1,6 @@
 package com.example.game3d;
 
-import static com.example.game3d.engine3d.Util.OBS;
+import static com.example.game3d.engine3d.Util.PLAYER;
 
 import android.content.Context;
 import android.content.res.AssetManager;
@@ -30,27 +30,20 @@ public class GameView extends SurfaceView {
         }
     };
     public static AssetManager ASSET_MANAGER = null;
-    Object3D tire;
 
     public GameView(Context context) throws IOException {
         super(context);
         ASSET_MANAGER = getContext().getAssets();
-        tire = new Object3D("opona.obj", Color.BLACK, Color.WHITE,OBS,90.0f,300.0f,300.0f, 1.57f,0.0f,0.0f);
+        player = new Player();
         drawThread.start();
     }
 
-    Object3D cube = Object3D.makeCube(OBS, 100f, 200f, 300f, Color.GREEN);
+    Player player;
 
     @Override
     public void onDraw(Canvas canvas) {
-        tire.draw(canvas);
-        tire.pitch -= 0.03;
-        tire.yaw -= 0.01;
-        Paint p = new Paint();
-        p.setColor(Color.RED);
-        p.setTextSize(30);
-        canvas.drawText(tire.centroid().x + "," + tire.centroid().y + "," + tire.centroid().z, 100, 100, p);
-        tire.invalidate();
+        player.draw(canvas);
+        player.invalidate();
     }
 
 

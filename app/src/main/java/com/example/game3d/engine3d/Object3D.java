@@ -2,21 +2,20 @@ package com.example.game3d.engine3d;
 
 import static com.example.game3d.GameView.ASSET_MANAGER;
 import static com.example.game3d.engine3d.Util.CAM_YAW;
-import static com.example.game3d.engine3d.Util.OBS;
+import static com.example.game3d.engine3d.Util.PLAYER;
 import static com.example.game3d.engine3d.Util.SCR_H;
 import static com.example.game3d.engine3d.Util.SCR_W;
 import static com.example.game3d.engine3d.Util.SCR_Y;
 import static com.example.game3d.engine3d.Util.VX;
 import static com.example.game3d.engine3d.Util.VXS;
+import static com.example.game3d.engine3d.Util.Vector;
 import static com.example.game3d.engine3d.Util.add;
 import static com.example.game3d.engine3d.Util.getCentroid;
 import static com.example.game3d.engine3d.Util.mult;
-import static com.example.game3d.engine3d.Util.Vector;
 import static com.example.game3d.engine3d.Util.pitch;
 import static com.example.game3d.engine3d.Util.roll;
 import static com.example.game3d.engine3d.Util.sub;
 import static com.example.game3d.engine3d.Util.yaw;
-
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -32,59 +31,15 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 
 public class Object3D {
-    public static class Face {
-        int color, ecolor;
-        int[] inds;
-
-        public Face(int color, int ecolor, int... inds) {
-            this.color = color;
-            this.ecolor = ecolor;
-            this.inds = inds;
-        }
-    }
-
-    private class ObjectFace extends Face{
-        public ObjectFace(int color, int ecolor, int... inds) {
-            super(color,ecolor,inds);
-        }
-
-        public double getDepth() {
-            double total = 0.0;
-            double num = inds.length;
-            for (int ind : inds) {
-                double x = tVerts[ind].x, y = tVerts[ind].y, z = tVerts[ind].z;
-                total += (x * x) / num + (y * y) / num + (z * z) / num;
-            }
-            return total;
-        }
-    }
-
-    private class Painter implements Comparator<ObjectFace> {
-        @Override
-        public int compare(ObjectFace f0, ObjectFace f1) {
-            return (int) -Math.signum(f0.getDepth() - f1.getDepth());
-        }
-    }
-
-    public static Face FC(int color, int ecolor, int... inds) {
-        return new Face(color, ecolor, inds);
-    }
-
-    public static Face[] FCS(Face... args) {
-        return args;
-    }
-
-    protected Vector[] verts, tVerts;
     public ObjectFace[] faces;
-    private Vector centerMass = null;
     public float yaw = 0.0f, pitch = 0.0f, roll = 0.0f;
+    protected Vector[] verts, tVerts;
     protected boolean facesSorted;
+    private Vector centerMass = null;
 
     public Object3D(String filename, int color, int ecolor, Vector mid, float sx, float sy, float sz, float init_yaw, float init_pitch, float init_roll) throws IOException {
-        List<String> lines = new ArrayList<>();
         try {
             InputStream inputStream = ASSET_MANAGER.open(filename);
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
@@ -95,12 +50,16 @@ public class Object3D {
                 if (line.length() < 2) {
                     continue;
                 }
-                if (line.charAt(0) == 'v' && line.charAt(1) == ' ') {
+                if (line.charAt(0) == 'v') {
                     String[] args = line.split(" ");
-                    vertexList.add(VX(Float.parseFloat(args[1]), Float.parseFloat(args[2]), Float.parseFloat(args[3])));
+                    if (line.charAt(1) == ' ') {
+                        Vector curr = VX(Float.parseFloat(args[1]), Float.parseFloat(args[2]), Float.parseFloat(args[3]));
+                        vertexList.add(curr);
+                    }
                 } else if (line.charAt(0) == 'f') {
                     String[] args = line.split(" ");
                     int[] inds = new int[args.length - 1];
+                    Vector norm = null;
                     for (int ind = 1; ind < args.length; ++ind) {
                         String[] info = args[ind].split("/");
                         inds[ind - 1] = Integer.parseInt(info[0]) - 1;
@@ -140,7 +99,6 @@ public class Object3D {
             throw new IOException();
         }
     }
-
     public Object3D(Vector[] verts, Face[] faces) {
         this.verts = verts;
         tVerts = new Vector[verts.length];
@@ -150,7 +108,6 @@ public class Object3D {
         }
         this.facesSorted = false;
     }
-
     public Object3D(Vector[] verts, Face[] faces, boolean facesSorted) {
         this.verts = verts;
         tVerts = new Vector[verts.length];
@@ -159,6 +116,14 @@ public class Object3D {
             this.faces[i] = new ObjectFace(faces[i].color, faces[i].ecolor, faces[i].inds);
         }
         this.facesSorted = facesSorted;
+    }
+
+    public static Face FC(int color, int ecolor, int... inds) {
+        return new Face(color, ecolor, inds);
+    }
+
+    public static Face[] FCS(Face... args) {
+        return args;
     }
 
     /*
@@ -218,9 +183,8 @@ public class Object3D {
             if (yaw != 0.0f) tVerts[i] = yaw(tVerts[i], centerMass, yaw);
             if (pitch != 0.0f) tVerts[i] = pitch(tVerts[i], centerMass, pitch);
             if (roll != 0.0f) tVerts[i] = roll(tVerts[i], centerMass, roll);
-            if (CAM_YAW != 0.0f) tVerts[i] = yaw(tVerts[i], OBS, CAM_YAW);
+            if (CAM_YAW != 0.0f) tVerts[i] = yaw(tVerts[i], PLAYER, CAM_YAW);
         }
-        update(canvas);
         if (facesSorted) {
             Arrays.sort(faces, new Painter());
         }
@@ -252,6 +216,40 @@ public class Object3D {
         centerMass = null;
         for (int i = 0; i < verts.length; ++i) {
             tVerts[i] = null;
+        }
+    }
+
+    public static class Face {
+        int color, ecolor;
+        int[] inds;
+
+        public Face(int color, int ecolor, int... inds) {
+            this.color = color;
+            this.ecolor = ecolor;
+            this.inds = inds;
+        }
+    }
+
+    private class ObjectFace extends Face {
+        public ObjectFace(int color, int ecolor, int... inds) {
+            super(color, ecolor, inds);
+        }
+
+        public double getDepth() {
+            double total = 0.0;
+            double num = inds.length;
+            for (int ind : inds) {
+                double x = tVerts[ind].x, y = tVerts[ind].y, z = tVerts[ind].z;
+                total += (x * x) / num + (y * y) / num + (z * z) / num;
+            }
+            return total;
+        }
+    }
+
+    private class Painter implements Comparator<ObjectFace> {
+        @Override
+        public int compare(ObjectFace f0, ObjectFace f1) {
+            return (int) -Math.signum(f0.getDepth() - f1.getDepth());
         }
     }
 }
