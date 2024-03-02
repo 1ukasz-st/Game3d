@@ -6,7 +6,6 @@ import static com.example.game3d.elements.Player.PLR_SZ;
 import static com.example.game3d.engine3d.Util.add;
 import static com.example.game3d.engine3d.Util.sub;
 import static com.example.game3d.engine3d.Util.yaw;
-import static java.lang.Math.PI;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -21,7 +20,6 @@ import java.io.IOException;
 import static com.example.game3d.engine3d.Util.*;
 
 import android.graphics.Color;
-import android.util.Log;
 
 public class Generator{
 
@@ -172,6 +170,7 @@ public class Generator{
 
         lastTile = new Tile(closeLeft,closeRight,farRight,farLeft);
         elements.pushBack(lastTile);
+        ++tilesSinceTurn;
     }
 
     float f(float x){
@@ -188,6 +187,7 @@ public class Generator{
                 elements.pushBack(new Feather(c.x,c.y,z));
             }catch (Exception e){e.printStackTrace();}
     }
+    private int tilesSinceTurn = 0;
     public void generate(int n, int difficulty){
         if(elements.isEmpty()){
             lastTile = new Tile(
@@ -204,9 +204,9 @@ public class Generator{
             int diceRoll = randInt(0,11);
             if(diceRoll>9 && n>=17 && step > 1){
                 int nSteps = randInt(16,min(n-1,32));
-                double dYaw = randDoubleRanges(3,-PI/(1.3*nSteps),-PI/(5*nSteps),PI/(5*nSteps),PI/(1.3*nSteps));
+                float dYaw = randDoubleRanges(3,-PI/(1.3f*nSteps),-PI/(5*nSteps),PI/(5*nSteps),PI/(1.3f*nSteps));
                 float descent = randIntRanges(-500,-300,400,700);
-                double r = randDouble(1.2f,1.5f,2);
+                double r = randFloat(1.2f,1.5f,2);
                 b*=r;
                 int tilesPerPlatform = randInt(2,4), tilesToDelete = randInt(0,tilesPerPlatform), total = tilesPerPlatform+tilesToDelete;
                 for(int i=0;i<nSteps;++i){
@@ -234,15 +234,15 @@ public class Generator{
             }
             else if(diceRoll > 5 && n >= 21 && step > 2){
                 int nSteps = randInt(20,min(n-1,25));
-                double minr = 0.2, maxr = 0.6;
+                float minr = 0.2f, maxr = 0.6f;
                 if(difficulty==1){
-                    minr = 0.4;
-                    maxr=0.75;
+                    minr = 0.4f;
+                    maxr=0.75f;
                 }else if(difficulty==2){
-                    minr = 0.6;
-                    maxr = 0.9;
+                    minr = 0.6f;
+                    maxr = 0.9f;
                 }
-                double r = randDouble(minr,maxr,2);
+                float r = randFloat(minr,maxr,2);
                 b*=r;
                 int k=0;
                 int which = randInt(0,2);
@@ -250,7 +250,7 @@ public class Generator{
                 if(which==0){
                     len = 20.0f / nSteps;
                 }else{
-                    len = (float) (PI / nSteps);
+                    len = (PI / nSteps);
                 }
 
                 for(float i=0;i<nSteps;++i){
@@ -260,8 +260,6 @@ public class Generator{
                         lPitch = (float) -Math.atan((g((i + 1) * len) - g(i * len)) / len);
                     }
                     addTile();
-                    //if(which == 0){
-                   // }
                     if(which!=0){
                         lastTile.retarded = true;
                     }else{
@@ -277,9 +275,9 @@ public class Generator{
                 ++step;
                 --n;
                 b/=r;
-            }else if(diceRoll>2 && n>=6 && step > 2){
+            }else if(diceRoll>2 && n>=6 && step > 2 && tilesSinceTurn > 10){
                 int nSteps = randInt(6,min(n,14));
-                double dYaw = randDoubleRanges(3,-PI/(2.5*nSteps),-PI/(5.5*nSteps),PI/(5.5*nSteps),PI/(2.5*nSteps));
+                double dYaw = randDoubleRanges(3,-PI/(2.5f*nSteps),-PI/(5.5f*nSteps),PI/(5.5f*nSteps),PI/(2.5f*nSteps));
                 for(int i=0;i<nSteps;++i){
                     lYaw+=dYaw;
                     addTile();
@@ -289,6 +287,7 @@ public class Generator{
                     ++step;
                     --n;
                 }
+                tilesSinceTurn=0;
             }else{
                 int nSteps = min(n,randInt(4,8));
                 for(int i=0;i<nSteps;++i) {

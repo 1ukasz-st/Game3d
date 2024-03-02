@@ -1,18 +1,11 @@
 package com.example.game3d.elements;
 
 import static com.example.game3d.elements.Player.CAM_YAW;
-import static com.example.game3d.elements.Player.PLR_SX;
-import static com.example.game3d.elements.Player.PLR_SY;
-import static com.example.game3d.elements.Player.PLR_SZ;
 import static com.example.game3d.engine3d.Util.OBS;
+import static com.example.game3d.engine3d.Util.PI;
 import static com.example.game3d.engine3d.Util.VX;
-import static com.example.game3d.engine3d.Util.add;
-import static com.example.game3d.engine3d.Util.getBoundingCuboid;
-import static com.example.game3d.engine3d.Util.getCentroid;
-import static com.example.game3d.engine3d.Util.randDouble;
-import static com.example.game3d.engine3d.Util.rayCuboidDistance;
+import static com.example.game3d.engine3d.Util.randFloat;
 import static com.example.game3d.engine3d.Util.yaw;
-import static java.lang.Math.PI;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -20,7 +13,6 @@ import static java.lang.Math.sin;
 
 import com.example.game3d.engine3d.Util.Cuboid;
 
-import android.graphics.Canvas;
 import android.graphics.Color;
 import android.util.Pair;
 
@@ -49,7 +41,7 @@ public class Feather extends WorldElement {
         assert(FEATHER_FACES.length>0);
         move(VX(x,y,z));
         pitch = 0.5f;
-        yaw = (float) randDouble(0,PI/2,2);
+        yaw = randFloat(0,PI/2,2);
         oneColorAndFace = true;
     }
 
@@ -74,7 +66,7 @@ public class Feather extends WorldElement {
         return deathMove.sqlen()>1;
     }
     public void die(){
-        deathMove = yaw(VX(-200,100,-150),OBS,-CAM_YAW);
+        deathMove = yaw(VX(-200,-10,-150),OBS,-CAM_YAW);
     }
 
     private Cuboid cuboid;

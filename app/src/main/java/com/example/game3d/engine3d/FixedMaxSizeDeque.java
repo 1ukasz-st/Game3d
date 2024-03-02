@@ -44,11 +44,6 @@ public class FixedMaxSizeDeque<T> {
         if (curr_size == 0) {
             throw new IllegalStateException("Deque is empty");
         }
-        int ind = front + curr_size;
-        if (ind >= max_size) {
-            ind -= curr_size;
-        }
-      //  elements[ind] = null;
         --curr_size;
     }
 

@@ -15,8 +15,9 @@ import static com.example.game3d.engine3d.Util.VX;
 import static com.example.game3d.engine3d.Util.Vector;
 import static com.example.game3d.engine3d.Util.adjustBrightness;
 import static com.example.game3d.engine3d.Util.getBrightness;
+import static com.example.game3d.engine3d.Util.getColorCloser;
 import static com.example.game3d.engine3d.Util.mult;
-import static com.example.game3d.engine3d.Util.randInt;
+import static com.example.game3d.engine3d.Util.randomDistantColor;
 import static com.example.game3d.engine3d.Util.yaw;
 import static java.lang.Math.PI;
 import static java.lang.Math.abs;
@@ -32,6 +33,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceView;
 
@@ -42,6 +44,7 @@ import java.io.IOException;
 
 public class GameView extends SurfaceView {
 
+    private static final int MAX_ELEMENTS_PER_FRAME = 90;
     private boolean running = true;
     private Thread drawThread = new Thread() {
         @Override
@@ -62,81 +65,14 @@ public class GameView extends SurfaceView {
 
     private float resetRectSize = 0;
     private boolean resetting = false;
-    private int maxTimeToColorChange = 1400, timeToColorChange = maxTimeToColorChange, targetColor;
-    private double maxBrightness = 70, minBrightness = 60;
+    private int maxTimeToColorChange = 300, timeToColorChange = maxTimeToColorChange, targetColor;
+    private int maxBrightness = 75, minBrightness = 55;
 
-
-    private int _randomColor(){
-        int x = randInt(75,255-30);
-        int y = randInt(30,255-x);
-        int z = 255 - x - y;
-
-        int diceRoll = randInt(1,6);
-        if(diceRoll <= 2){
-            if(diceRoll == 1){
-                return adjustBrightness(x,y,z,minBrightness,maxBrightness);
-            }else{
-                return adjustBrightness(x,z,y,minBrightness,maxBrightness);
-            }
-        }else if(diceRoll<=4){
-            if(diceRoll == 3){
-                return adjustBrightness(y,x,z,minBrightness,maxBrightness);
-            }else{
-                return adjustBrightness(y,z,x,minBrightness,maxBrightness);
-            }
-        }else{
-            if(diceRoll == 5){
-                return adjustBrightness(z,x,y,minBrightness,maxBrightness);
-            }else{
-                return adjustBrightness(z,y,x,minBrightness,maxBrightness);
-            }
-        }
-    }
-    private int randomColor(int currColor){
-        int r = (currColor >> 16) & 0xFF;
-        int g = (currColor >> 8) & 0xFF;
-        int b = currColor & 0xFF;
-
-        int color = _randomColor();
-        int r2 = (color >> 16) & 0xFF;
-        int g2 = (color >> 8) & 0xFF;
-        int b2 = color & 0xFF;
-        if(Math.sqrt((r-r2)*(r-r2) + (g-g2)*(g-g2) + (b-b2)*(b-b2)) < 75){
-            return randomColor(currColor);
-        }
-        return color;
-    }
-    private int getColorCloser(int currColor){
-        int r = (currColor >> 16) & 0xFF;
-        int g = (currColor >> 8) & 0xFF;
-        int b = currColor & 0xFF;
-
-        int r2 = (targetColor >> 16) & 0xFF;
-        int g2 = (targetColor >> 8) & 0xFF;
-        int b2 = targetColor & 0xFF;
-
-        //if(timeToColorChange%10 == 0) {
-            if (r < r2) {
-                ++r;
-            } else if (r > r2) {
-                --r;
-            } if (g < g2) {
-                ++g;
-            } else if (g > g2) {
-                --g;
-            } if (b < b2) {
-                ++b;
-            } else if (b > b2) {
-                --b;
-            }
-        //}
-        return Color.rgb(r,g,b);
-    }
 
     private void reset(){
         try {
             player = new Player();
-            targetColor = randomColor(Color.TRANSPARENT);
+            targetColor = adjustBrightness(randomDistantColor(Color.TRANSPARENT,minBrightness,maxBrightness),minBrightness,maxBrightness);
             gen = new Generator(targetColor);
             timeToColorChange = maxTimeToColorChange;
             gen.generate(MAX_TILES,difficulty);
@@ -170,16 +106,22 @@ public class GameView extends SurfaceView {
                 player.expectedSpeed=Player.MIN_SPEED;
                 difficulty=0;
             }
-            targetColor = randomColor(gen.tileColor);
+            targetColor = adjustBrightness(randomDistantColor(gen.tileColor,minBrightness,maxBrightness),minBrightness,maxBrightness);
             timeToColorChange = maxTimeToColorChange;
         }else{
             --timeToColorChange;
         }
-        gen.tileColor = adjustBrightness(gen.tileColor,minBrightness,maxBrightness);
-        gen.tileColor = adjustBrightness(gen.tileColor,minBrightness,maxBrightness);
-        gen.tileColor = adjustBrightness(gen.tileColor,minBrightness,maxBrightness);
-
-        assert(getBrightness(gen.tileColor)>=minBrightness && getBrightness(gen.tileColor)<=maxBrightness);
+        gen.tileColor = getColorCloser(gen.tileColor,targetColor);
+        gen.tileColor = getColorCloser(gen.tileColor,targetColor);
+        gen.tileColor = getColorCloser(gen.tileColor,targetColor);
+        /*if(getColorCloser(gen.tileColor,targetColor) == gen.tileColor){
+            gen.tileColor = adjustBrightness(gen.tileColor,minBrightness,maxBrightness);
+        }*/
+        if(!(getBrightness(targetColor)>=minBrightness && getBrightness(targetColor)<=maxBrightness)){
+            Log.i("NIGGER NIGGER NIGGER", ""+getBrightness(targetColor));
+            System.exit(1);
+        }
+      //  assert(getBrightness(gen.tileColor)>=minBrightness && getBrightness(gen.tileColor)<=maxBrightness);
         if(resetting){
             p.setColor(gen.tileColor);
             canvas.drawRect(0,0,resetRectSize,SCR_H,p);
@@ -220,11 +162,11 @@ public class GameView extends SurfaceView {
         float maxZ = -1000000000.0f;
 
         int tilesOptimized=0;
-        for(int i =gen.elements.size()-1;i>=0;i--) {
-            assert (!gen.elements.get(i).isValid());
+        int elementsThisTime = min(gen.elements.size(),MAX_ELEMENTS_PER_FRAME);
+        for(int i =0;i<elementsThisTime;++i) {
             gen.elements.get(i).calculate();
         }
-        for(int i =gen.elements.size()-1;i>=0;i--) {
+        for(int i = elementsThisTime-1;i>=0;i--) {
             WorldElement we = gen.elements.get(i);
             if(we.vertex(0).y > MAX_Y){
                 if(!tilePath.isEmpty()){
@@ -253,9 +195,6 @@ public class GameView extends SurfaceView {
                     tile.draw(canvas);
                 }
                 if(tile.isValid()) {
-                /*p.setTextSize(40);
-                p.setColor(Color.WHITE);
-                canvas.drawText(""+i,tile.pVertex(0).x,tile.pVertex(0).z,p);*/
                     maxZ = max(maxZ, tile.vertex(0).z);
                 }
             }else{
@@ -268,7 +207,6 @@ public class GameView extends SurfaceView {
                 }
                 we.draw(canvas);
             }
-
         }
 
         if(!tilePath.isEmpty()){
@@ -288,9 +226,8 @@ public class GameView extends SurfaceView {
 
         player.currSpeed = player.baseSpeed;
 
-        int chosenIndex = 0;
         Tile chosenTile=null;
-        for(int i = 0; i< gen.elements.size(); i++) {
+        for(int i = 0; i< elementsThisTime; i++) {
             if (gen.elements.get(i) instanceof Feather) {
                 Feather feather = (Feather) (gen.elements.get(i));
                 if (feather.isValid() && !feather.dead() && feather.collidesPlayer(player)) {
@@ -300,28 +237,26 @@ public class GameView extends SurfaceView {
                 }
             }
         }
-        for(int i = 0; i< gen.elements.size(); i++) {
+        for(int i = 0; i< elementsThisTime; i++) {
             if(gen.elements.get(i) instanceof Tile) {
                 Tile tile = (Tile)(gen.elements.get(i));
                 if (tile.isValid() && abs(tile.vertex(0).y) <= 2000) {
                     if (tile.collidesPlayer(player)) {
                         player.canJump = true;
                         chosenTile = tile;
-                        chosenIndex = i;
                         break;
                     }
                 }
             }
         }
 
-        if((player.jumpsLeft>0 || player.canJump) && (player.waitForJump || (player.jumpPower>0 && player.move.z > 20 && chosenTile != null))){
+        if(((player.jumpsLeft>0 && touchReleased) || (chosenTile!=null && (player.airTime>40 || touchReleased))) && player.jumpPower>0){
             float jp = player.jumpPower < player.maxJumpPower*0.75f ? player.maxJumpPower*0.3f : player.maxJumpPower;
             float k = (float) (sqrt(1+jp/player.maxJumpPower)-1);
             float j = k*player.maxJumpPower*0.75f + player.currSpeed;
 
             player.move = VX(0,j*0.7f, -j*1.1f);
             player.move = yaw(player.move, OBS, -CAM_YAW);
-           // player.jumpWait = 0;
             player.waitForJump = false;
             player.jumpPower = 0;
             if(!player.canJump){
@@ -366,6 +301,13 @@ public class GameView extends SurfaceView {
             }
         }
 
+        if(chosenTile==null){
+            ++player.airTime;
+        }else{
+            player.airTime=0;
+        }
+
+
         //player.move = yaw(VX(0,player.currSpeed,0), OBS, -CAM_YAW);
 
        /* if(player.jumpWait>0){
@@ -378,27 +320,16 @@ public class GameView extends SurfaceView {
         }
 
         //int mustDelete = max(0,chosenIndex - 5);
-
-
-
         /*for(int i=0;i<mustDelete-1;++i){
             gen.elements.removeFirst();
         }*/
 
-        while(!gen.elements.isEmpty() && gen.elements.getFirst().vertex(0).y<-4000){
-            gen.elements.removeFirst();
-        }
-        for(int i = 0; i< gen.elements.size(); i++){
-            if(gen.elements.get(i).isValid()) {
-                gen.elements.get(i).invalidate();
-            }
-        }
-        player.invalidate();
+
+
 
         p.setTextSize(40);
         p.setColor(Color.WHITE);
-        //canvas.drawText("Tiles Optimized: "+tilesOptimized,100,150,p);
-      /*  int rr = (gen.tileColor >> 16) & 0xFF;
+        int rr = (gen.tileColor >> 16) & 0xFF;
         int gg = (gen.tileColor >> 8) & 0xFF;
         int bb = gen.tileColor & 0xFF;
         canvas.drawText("R: "+rr,100,150,p);
@@ -407,13 +338,27 @@ public class GameView extends SurfaceView {
         canvas.drawText("brightness: "+(int)(0.2126 * rr + 0.7152 * gg + 0.0722 * bb),100,300,p);
         canvas.drawText("yaw: "+(player.yaw),100,350,p);
         canvas.drawText("faces skipped: "+(player.facesSkipped),100,400,p);
-        canvas.drawText("tiles: "+(gen.tiles.size()),100,450,p);
-        canvas.drawText("BS: "+player.baseSpeed,100,500,p);
-        canvas.drawText("CS: "+player.currSpeed,100,550,p);
-        canvas.drawText("Tiles optimized: "+tilesOptimized,100,600,p);*/
-      //  canvas.drawText("SD: "+player.slowDownTime,100,600,p);
-      //  canvas.drawText("CD: "+player.slowDownCooldown,100,650,p);
+        canvas.drawText("BS: "+player.baseSpeed,100,450,p);
+        canvas.drawText("CS: "+player.currSpeed,100,500,p);
+        canvas.drawText("Tiles optimized: "+tilesOptimized,100,550,p);
+        canvas.drawText("Tiles total: "+gen.elements.size(),100,600,p);
+        canvas.drawText("Air time: "+player.airTime,100,650,p);
+        canvas.drawText("First tile coords: "+(int)(gen.elements.getFirst().vertex(0).x)+","+(int)(gen.elements.getFirst().vertex(0).y)+","+(int)(gen.elements.getFirst().vertex(0).z),100,700,p);
 
+        while(!gen.elements.isEmpty()){
+            if(gen.elements.getFirst().vertex(0).y<-1000 || gen.elements.getFirst() instanceof Feather) {
+                gen.elements.removeFirst();
+                --elementsThisTime;
+            }else{
+                break;
+            }
+        }
+        for(int i = 0; i < elementsThisTime; i++){
+            if(gen.elements.get(i).isValid()) {
+                gen.elements.get(i).invalidate();
+            }
+        }
+        player.invalidate();
         if(gen.elements.size()<MIN_TILES){
             gen.generate(MAX_TILES-gen.elements.size(),difficulty);
         }
@@ -421,16 +366,20 @@ public class GameView extends SurfaceView {
 
     private float endX,endY;
 
+    private boolean touchReleased=true;
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 endX = event.getX();
                 endY = event.getY();
+                touchReleased=false;
                 break;
             case MotionEvent.ACTION_MOVE:
                 float dx = -endX;
                 float dy = -endY;
+                touchReleased=false;
                 endX = event.getX();
                 endY = event.getY();
                 dx += endX;
@@ -439,7 +388,7 @@ public class GameView extends SurfaceView {
                     break;
                 }
                 if(abs(dy)>3 && abs(dx)<abs(dy)*0.5){
-                    player.jumpPower = max(0,min(player.maxJumpPower,player.jumpPower- dy*0.05f - (float)(signum(dy))*((float)(sqrt(sqrt(player.jumpPower/player.maxJumpPower))*55*0.14f)) ));
+                    player.jumpPower = max(0,min(player.maxJumpPower,player.jumpPower- dy*0.05f - (signum(dy))*((float)(sqrt(sqrt(player.jumpPower/player.maxJumpPower))*55*0.14f)) ));
                 }
                 if(endY > SCR_H/8 && abs(dy)<50) {
                     CAM_YAW += 0.85 * dx * PI / SCR_W;
@@ -457,7 +406,7 @@ public class GameView extends SurfaceView {
             case MotionEvent.ACTION_UP:
                 endX = 0;
                 endY = 0;
-
+                touchReleased=true;
                 if(player.jumpPower>0){
                     player.waitForJump = true;
                     //player.jumpWait = player.jumpMaxWait;

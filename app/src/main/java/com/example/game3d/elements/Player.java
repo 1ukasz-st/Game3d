@@ -38,6 +38,7 @@ public class Player extends Object3D {
     public static final int PLR_SX = 84, PLR_SY = 296, PLR_SZ = 296;
     public int jumpsLeft ;
     public float speedupTime;
+    public int airTime;
     //public int slowDownCooldown=0, slowDownMaxCooldown=70;
 
     public Cuboid cuboid;
@@ -81,6 +82,7 @@ public class Player extends Object3D {
         move = VX(0,0,0);
         ct=0;
         jumpsLeft = 0;
+        airTime=0;
     }
 
     @Override

@@ -10,15 +10,16 @@ import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
 import android.graphics.Color;
-import android.graphics.drawable.Drawable;
 import android.util.Log;
 
 import java.util.Random;
-import com.example.game3d.engine3d.Object3D.Face;
+
 public class Util {
     public static float SCR_W, SCR_H;
     public static final float SCR_Y = 1000.0f;
     public static final Vector PLAYER = new Vector(0,800,450), OBS = new Vector(0.0f,0.0f,0.0f);
+
+    public static float PI = (float)(Math.PI);
 
     public static class Vector {
         public float x, y, z;
@@ -99,42 +100,6 @@ public class Util {
     public static double dotProduct(Vector v1, Vector v2) {
         return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
     }
-    public static class Triangle{
-        public Vector a,b,c;
-        public Triangle(Vector i, Vector j, Vector k){
-            a=i;
-            b=j;
-            c=k;
-        }
-    }
-    public static double rayTriangleDistance(Vector rayOrigin,
-                                               Vector rayVector,
-                                               Triangle inTriangle) { // boring ahh linear algebra
-        Vector vertex0 = inTriangle.a;
-        Vector vertex1 = inTriangle.b;
-        Vector vertex2 = inTriangle.c;
-        Vector edge1 = sub(vertex1,vertex0);
-        Vector edge2 = sub(vertex2,vertex0);
-        double a, f, u, v;
-        Vector h = crossProduct(rayVector, edge2);
-        a = dotProduct(edge1,h);
-        if (a > -0.0001 && a < 0.0001) {
-            return 1e9;
-        }
-        f = 1.0 / a;
-        Vector s = sub(rayOrigin, vertex0);
-        u = f * (dotProduct(s,h));
-        if (u < 0.0 || u > 1.0) {
-            return 1e9;
-        }
-        Vector q = crossProduct(s, edge1);
-        v = f * dotProduct(rayVector,q);
-        if (v < 0.0 || u + v > 1.0) {
-            return 1e9;
-        }
-        double res = f * dotProduct(edge2,q);
-        return res >= 0 ? res : 1e9;
-    }
 
     public static Vector getNormal(Vector point1, Vector point2, Vector point3) {
         Vector edge1 = sub(point2, point1);
@@ -151,7 +116,7 @@ public class Util {
     }
 
 
-    public static double randDouble(double min, double max, int decimalDigits) {
+    public static float randFloat(float min, float max, int decimalDigits) {
         if (min > max || decimalDigits < 0) {
             throw new IllegalArgumentException("Invalid input values");
         }
@@ -162,21 +127,21 @@ public class Util {
         double randomValue = min + (random.nextDouble() * (max - min));
         double scaleFactor = Math.pow(10, decimalDigits);
 
-        return Math.round(randomValue * scaleFactor) / scaleFactor;
+        return (float) (Math.round(randomValue * scaleFactor) / scaleFactor);
     }
 
     public static int randInt(int min, int max) {
-        return (int)(randDouble(min,max,0));
+        return (int)(randFloat(min,max,0));
     }
 
-    public static double randDoubleRanges(int decimalDigits, double... args){
+    public static float randDoubleRanges(int decimalDigits, float... args){
         if((args.length & 1) == 1){
             throw new IllegalArgumentException("Odd number of args");
         }
         int n = args.length / 2;
         int ind = randInt(0,n-1);
-        double l = args[ind*2], r = args[2*ind+1];
-        return randDouble(l,r,decimalDigits);
+        float l = args[ind*2], r = args[2*ind+1];
+        return randFloat(l,r,decimalDigits);
     }
 
     public static int randIntRanges(int... args){
@@ -189,24 +154,81 @@ public class Util {
         return randInt(l,r);
     }
 
-    public static double getBrightness(int x, int y, int z){
-        return 0.2126 * x + 0.7152 * y + 0.0722 * z;
+    public static float getBrightness(int x, int y, int z){
+        return (float) floor(0.2126f * x + 0.7152f * y + 0.0722f * z);
     }
 
-    public static double getBrightness(int color){
-        return 0.2126*((color>>16)&255) + 0.7152*((color>>8)&255) + 0.0722*(color&255);
+    public static int red(int color){
+        return (color>>16)&255;
+    }
+    public static int green(int color){
+        return (color>>8)&255;
+    }
+    public static int blue(int color){
+        return (color )&255;
     }
 
-    public static int adjustBrightness(int color, double mn, double mx){
-        int x = ((color>>16)&255);
-        int y = ((color>>8)&255);
-        int z = (color&255);
+    public static float getBrightness(int color){
+        return (float) floor(0.2126f*red(color) + 0.7152f*green(color) + 0.0722f*blue(color));
+    }
+
+    public static int multBrightness(int color, float f){
+        int x = red(color);
+        int y = green(color);
+        int z = blue(color);
+        x = (int) min(255,ceil(x * f));
+        y = (int) min(255,ceil(y * f));
+        z = (int) min(255,ceil(z * f));
+        return Color.rgb(x,y,z);
+    }
+
+    public static int adjustBrightness(int color, float mn, float mx){
+        float brightness = getBrightness(color);
+        if(brightness < mn){
+            ++mn;
+            color = multBrightness(color,mn/brightness);
+            brightness = getBrightness(color);
+            if(brightness < mn) {
+                int r = red(color), g = green(color), b = blue(color);
+                if(r != 0){
+                    r = (int) min(255,(mn-0.7152f*g-0.0722f*b)/0.2126f);
+                    color = Color.rgb(r,g,b);
+                    brightness = getBrightness(color);
+                }
+                if(brightness<mn){
+                    if(g != 0){
+                        g = (int) min(255,(mn-0.2126f*r-0.0722f*b)/0.7152f);
+                        color = Color.rgb(r,g,b);
+                        brightness = getBrightness(color);
+                    }
+                    if(brightness<mn){
+                        if(b != 0){
+                            g = (int) min(255,(mn-0.2126f*r-0.7152f*g)/0.0722f);
+                            color = Color.rgb(r,g,b);
+                        }
+                    }
+                }
+            }
+        }
+        brightness = getBrightness(color);
+        if(brightness > mx){
+            color = multBrightness(color,mx/brightness);
+        }
+        brightness = getBrightness(color);
+        if(!(brightness >=mn && brightness <=mx)){
+            Log.i("NIGGER NIGGER NIGGER",red(color)+","+green(color)+","+blue(color)+" "+getBrightness(color));
+            System.exit(1);
+        }
+        return color;
+    }
+
+    public static int adjustBrightness(int x, int y, int z, float mn, float mx){
         double brightness = getBrightness(x,y,z);
         if (brightness < mn) {
             double scale = mn / brightness;
-            x = (int) ceil((double)(x) * scale);
-            y = (int) ceil((double)(y) * scale);
-            z = (int) ceil((double)(z) * scale);
+            x = (int) ceil(x * scale);
+            y = (int) ceil(y * scale);
+            z = (int) ceil(z * scale);
         }
         if (mn != mx && brightness > mx) {
             double scale = mx / brightness;
@@ -218,23 +240,88 @@ public class Util {
         assert(brightness >=mn && brightness <=mx);
         return Color.rgb(x,y,z);
     }
-    public static int adjustBrightness(int x, int y, int z, double mn, double mx){
-        double brightness = getBrightness(x,y,z);
-        if (brightness < mn) {
-            double scale = mn / brightness;
-            x = (int) ceil((double)(x) * scale);
-            y = (int) ceil((double)(y) * scale);
-            z = (int) ceil((double)(z) * scale);
+
+    public static int randomColor(int minBrightness,int maxBrightness){
+        int x = randInt(75,255-30);
+        int y = randInt(30,255-x);
+        int z = 255 - x - y;
+
+        int diceRoll = randInt(1,6);
+        if(diceRoll <= 2){
+            if(diceRoll == 1){
+                return adjustBrightness(x,y,z,minBrightness,maxBrightness);
+            }else{
+                return adjustBrightness(x,z,y,minBrightness,maxBrightness);
+            }
+        }else if(diceRoll<=4){
+            if(diceRoll == 3){
+                return adjustBrightness(y,x,z,minBrightness,maxBrightness);
+            }else{
+                return adjustBrightness(y,z,x,minBrightness,maxBrightness);
+            }
+        }else{
+            if(diceRoll == 5){
+                return adjustBrightness(z,x,y,minBrightness,maxBrightness);
+            }else{
+                return adjustBrightness(z,y,x,minBrightness,maxBrightness);
+            }
         }
-        if (mn != mx && brightness > mx) {
-            double scale = mx / brightness;
-            x = (int) floor((double)(x) * scale);
-            y = (int) floor((double)(y) * scale);
-            z = (int) floor((double)(z) * scale);
+    }
+    public static int randomDistantColor(int currColor, int minBrightness, int maxBrightness){
+        int r = (currColor >> 16) & 0xFF;
+        int g = (currColor >> 8) & 0xFF;
+        int b = currColor & 0xFF;
+
+        int color = randomColor(minBrightness,maxBrightness);
+        int r2 = (color >> 16) & 0xFF;
+        int g2 = (color >> 8) & 0xFF;
+        int b2 = color & 0xFF;
+        if((r-r2)*(r-r2) + (g-g2)*(g-g2) + (b-b2)*(b-b2) < 75*75){ // default distance is 75
+            return randomDistantColor(currColor,minBrightness,maxBrightness);
         }
-        brightness = getBrightness(x,y,z);
-        assert(brightness >=mn && brightness <=mx);
-        return Color.rgb(x,y,z);
+        return color;
+    }
+    public static int randomDistantColor(int currColor, int minBrightness, int maxBrightness, int distance){
+        int r = (currColor >> 16) & 0xFF;
+        int g = (currColor >> 8) & 0xFF;
+        int b = currColor & 0xFF;
+
+        int color = randomColor(minBrightness,maxBrightness);
+        int r2 = (color >> 16) & 0xFF;
+        int g2 = (color >> 8) & 0xFF;
+        int b2 = color & 0xFF;
+        if((r-r2)*(r-r2) + (g-g2)*(g-g2) + (b-b2)*(b-b2) < distance*distance){
+            return randomDistantColor(currColor,minBrightness,maxBrightness);
+        }
+        return color;
+    }
+    public static int getColorCloser(int currColor, int targetColor){
+        int r = (currColor >> 16) & 0xFF;
+        int g = (currColor >> 8) & 0xFF;
+        int b = currColor & 0xFF;
+
+        int r2 = (targetColor >> 16) & 0xFF;
+        int g2 = (targetColor >> 8) & 0xFF;
+        int b2 = targetColor & 0xFF;
+
+        if (r < r2) {
+            ++r;
+        } else if (r > r2) {
+            --r;
+        }
+
+        if (g < g2) {
+            ++g;
+        } else if (g > g2) {
+            --g;
+        }
+
+        if (b < b2) {
+            ++b;
+        } else if (b > b2) {
+            --b;
+        }
+        return (255<<24) | (r<<16) | (g<<8) | b;
     }
 
     public static double maxAll(double ... args){
@@ -338,6 +425,16 @@ public class Util {
             return 1e9;
         }
         return t0;
+    }
+
+    Vector randomPointInTriangle(Vector a, Vector b, Vector c){
+        float i=randFloat(0.0f,1.0f,2), j = randFloat(0.0f,1.0f,2);
+        if(i>j){
+            float tmp=i;
+            i=j;
+            j=tmp;
+        }
+        return add(a,add(mult(sub(b,a),i),mult(sub(c,a),j)));
     }
 
 }
