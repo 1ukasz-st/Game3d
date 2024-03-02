@@ -1,4 +1,8 @@
 package com.example.game3d;
+import static com.example.game3d.engine3d.Util.SCR_H;
+import static com.example.game3d.engine3d.Util.SCR_W;
+import static com.example.game3d.engine3d.Util.VX;
+
 import android.app.Activity;
 import android.graphics.Color;
 import android.graphics.Insets;
@@ -7,6 +11,7 @@ import android.util.DisplayMetrics;
 import android.view.WindowInsets;
 import android.view.WindowMetrics;
 
+import com.example.game3d.engine3d.Object3D;
 import com.example.game3d.engine3d.Util;
 
 import java.io.IOException;
@@ -39,6 +44,7 @@ public class GameActivity extends Activity {
             Util.SCR_W = displayMetrics.widthPixels;
             Util.SCR_H = displayMetrics.heightPixels;
         }
+        Object3D.moveToScreen = VX(SCR_W/2,0,SCR_H/2);
         try {
             drawView = new GameView(this);
             drawView.setBackgroundColor(Color.BLACK);
