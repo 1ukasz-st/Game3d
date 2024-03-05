@@ -70,6 +70,8 @@ public class Object3D {
         }
     }
 
+    protected void extraInit(){}
+
     public static Pair<Vector[], Face[]> loadFromFile(String filename, int color, int ecolor, Vector mid, float sx, float sy, float sz, float init_yaw, float init_pitch, float init_roll) throws IOException {
         try {
             InputStream inputStream = ASSET_MANAGER.open(filename);
@@ -148,6 +150,7 @@ public class Object3D {
         facesSorted = true;
         tVerts = new Vector[verts.length];
         path.setFillType(Path.FillType.EVEN_ODD);
+        extraInit();
     }
     public Object3D(Vector[] verts, Face[] faces) {
         this.verts = new Vector[verts.length];
@@ -160,6 +163,7 @@ public class Object3D {
             this.faces[i] = new ObjectFace(faces[i].color, faces[i].ecolor, faces[i].inds);
         }
         this.facesSorted = false;
+        extraInit();
         path.setFillType(Path.FillType.EVEN_ODD);
 
     }
@@ -176,6 +180,7 @@ public class Object3D {
         }
         this.facesSorted = facesSorted;
         path.setFillType(Path.FillType.EVEN_ODD);
+        extraInit();
 
     }
 
@@ -250,16 +255,11 @@ public class Object3D {
         return maxx<0 || minx>SCR_W || maxz<0 || minz>SCR_H;
     }
     public boolean slightlyOutOfScreen(){
-        float maxx=-1e9f,maxz=-1e9f;
-        float minx=1e9f,minz=1e9f;
+        float miny=1e9f;
         for(int i=0;i<nVerts();++i){
-            Vector v = pVertex(i);
-            maxx = max(maxx,v.x);
-            minx = min(minx,v.x);
-            maxz = max(maxz,v.z);
-            minz = min(minz,v.z);
+            miny = min(miny,vertex(i).y);
         }
-        return minx<0 || maxx>SCR_W || minz<0 || minz>SCR_H;
+        return outOfScreen() || miny<0;
     }
     public Vector centroid() {
         return VX(rotatedCenter.x, rotatedCenter.y, rotatedCenter.z);
@@ -369,12 +369,12 @@ public class Object3D {
                     if (tVerts[ind].y < 0) {
                         continue;
                     }
-                    Vector projected = project(tVerts[ind]);
+                    Vector projected = pVertex(ind);
                     if (first) {
-                        path.moveTo(projected.x + SCR_W / 2f, projected.z + SCR_H / 2f);
+                        path.moveTo(projected.x, projected.z);
                         first = false;
                     } else {
-                        path.lineTo(projected.x + SCR_W / 2f, projected.z + SCR_H / 2f);
+                        path.lineTo(projected.x, projected.z);
                     }
                 }
                 path.close();
@@ -396,12 +396,12 @@ public class Object3D {
                     if (tVerts[ind].y < 0) {
                         continue;
                     }
-                    Vector projected = project(tVerts[ind]);
+                    Vector projected = pVertex(ind);
                     if (first) {
-                        path.moveTo(projected.x + SCR_W / 2f, projected.z + SCR_H / 2f);
+                        path.moveTo(projected.x, projected.z);
                         first = false;
                     } else {
-                        path.lineTo(projected.x + SCR_W / 2f, projected.z + SCR_H / 2f);
+                        path.lineTo(projected.x, projected.z);
                     }
                 }
                 path.close();

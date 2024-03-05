@@ -12,6 +12,7 @@ import static java.lang.Math.min;
 import static java.lang.Math.sin;
 import static java.lang.Math.tan;
 
+import com.example.game3d.GameView;
 import com.example.game3d.engine3d.FixedMaxSizeDeque;
 import com.example.game3d.engine3d.Object3D;
 
@@ -20,36 +21,49 @@ import java.io.IOException;
 import static com.example.game3d.engine3d.Util.*;
 
 import android.graphics.Color;
+import android.util.Log;
 
 public class Generator{
 
-    public Generator(int color){
+    private GameView game;
+    public Generator(int color, GameView game){
         this.tileColor = color;
+        this.game = game;
     }
     public static final int MAX_TILES = 120, MIN_TILES = 70;
     public static class WorldElement extends Object3D{
-        public WorldElement(String filename, int color, int ecolor, Vector mid, float sx, float sy, float sz, float init_yaw, float init_pitch, float init_roll) throws IOException {
+
+        protected GameView game;
+        public WorldElement(String filename, int color, int ecolor, Vector mid, float sx, float sy, float sz, float init_yaw, float init_pitch, float init_roll, GameView game) throws IOException {
             super(filename, color, ecolor, mid, sx, sy, sz, init_yaw, init_pitch, init_roll);
+            this.game=game;
         }
-        public WorldElement(Vector[] verts, Face[] faces) {
+        public WorldElement(Vector[] verts, Face[] faces, GameView game) {
             super(verts, faces);
+            this.game=game;
         }
-        public WorldElement(Vector[] verts, Face[] faces, boolean facesSorted) {
+        public WorldElement(Vector[] verts, Face[] faces, boolean facesSorted, GameView game) {
            super(verts, faces, facesSorted);
+           this.game=game;
+        }
+        public boolean collidesPlayer(Player player){
+           return false;
+        }
+        public void interactWithPlayer(Player player){
+
         }
     }
 
     public int tileColor;
     public float a=1400,b=500;
-    public class Tile extends WorldElement{
-        public int color = Color.RED;
+    public static class Tile extends WorldElement{
         public boolean speedup = false;
         public boolean retarded = false;
-        public Tile(Vector a, Vector b, Vector c, Vector d){
+        public Tile(Vector a, Vector b, Vector c, Vector d, GameView game){
             super(
                 VXS(a,b,c,d),
-                FCS(FC(tileColor,tileColor,0,1,2,3))
-            );;
+                FCS(FC(game.getGenerator().tileColor,game.getGenerator().tileColor,0,1,2,3))
+            ,game);
         }
 
         public boolean isFrontHill(){
@@ -65,17 +79,14 @@ public class Generator{
         @Override
         public void calculate() {
             super.calculate();
-            if(color==Color.WHITE || color==Color.YELLOW){
-                return;
-            }
             double s = min(3,-getSlope());
                 double brightness_mul = min(1.5, 1 + s*s / 9.5);
                 if(retarded){
                     brightness_mul = min(1.5, 1 + s*s / 1.1);
                 }
-            int curr_r = (tileColor >> 16) & 0xFF;
-            int curr_g = (tileColor >> 8) & 0xFF;
-            int curr_b = tileColor & 0xFF;
+            int curr_r = (game.getGenerator().tileColor >> 16) & 0xFF;
+            int curr_g = (game.getGenerator().tileColor >> 8) & 0xFF;
+            int curr_b = game.getGenerator().tileColor & 0xFF;
             if(isBackHill()){
                 if(vertex(0).y > 5000) {
                     brightness_mul *= 0.91;
@@ -86,9 +97,8 @@ public class Generator{
             curr_r = (int) (min(255,(double)(curr_r)*brightness_mul));
             curr_g = (int) (min(255,(double)(curr_g)*brightness_mul));
             curr_b = (int) (min(255,(double)(curr_b)*brightness_mul));
-            color = Color.rgb(curr_r, curr_g, curr_b);
-            faces[0].color = color;
-            faces[0].ecolor = color;
+            faces[0].color = Color.rgb(curr_r, curr_g, curr_b);;
+            faces[0].ecolor = Color.rgb(curr_r, curr_g, curr_b);;
         }
 
         public Vector getDirection(){
@@ -106,7 +116,11 @@ public class Generator{
             return verts[i];
         }
 
+        @Override
         public boolean collidesPlayer(Player player){
+            if(abs(vertex(0).y)>2000){
+                return false;
+            }
             Vector pc = player.centroid();
             float minx = pc.x-PLR_SX*0.5f, miny = pc.y, minz = pc.z+PLR_SZ*0.5f - 30;
             float maxx =  pc.x+PLR_SX*0.5f, maxy = pc.y+PLR_SY*0.5f + 50, maxz = pc.z+PLR_SZ*0.5f + 20;
@@ -137,6 +151,12 @@ public class Generator{
             }
             return true;
         }
+
+        @Override
+        public void interactWithPlayer(Player player){
+            player.chosenTile=this;
+            player.canJump=true;
+        }
         public float getSlope() {
             return min(0,(float) ((verts[3].z - verts[0].z) / Math.sqrt(getDirection().sqlen())));
         }
@@ -163,12 +183,11 @@ public class Generator{
         Vector diff = sub(lastTile.vert(3),closeLeft);
 
         closeLeft = add(closeLeft,diff);
-        closeRight = add(closeRight,diff);
+        closeRight = lastTile.vert(2);
         farRight = add(farRight,diff);
         farLeft = add(farLeft,diff);
-        closeRight = lastTile.vert(2);
 
-        lastTile = new Tile(closeLeft,closeRight,farRight,farLeft);
+        lastTile = new Tile(closeLeft,closeRight,farRight,farLeft,game);
         elements.pushBack(lastTile);
         ++tilesSinceTurn;
     }
@@ -181,11 +200,25 @@ public class Generator{
         return 0.5f*(float) (1- v * v);}
 
     void addAddons(){
-            float z = lastTile.vert(0).z - Feather.FEATHER_SZ;
-           Vector c = getCentroid(lastTile.vert(0),lastTile.vert(1),lastTile.vert(2),lastTile.vert(3));
-            try {
-                elements.pushBack(new Feather(c.x,c.y,z));
-            }catch (Exception e){e.printStackTrace();}
+        int type = randInt(0,5);
+        Vector pos[] = new Vector[]{randomPointInTriangle(lastTile.vert(0),lastTile.vert(1),lastTile.vert(2)),randomPointInTriangle(lastTile.vert(0),lastTile.vert(3),lastTile.vert(2))};
+        Vector where = pos[randInt(0,1)]; //getCentroid(lastTile.vert(0),lastTile.vert(1),lastTile.vert(2),lastTile.vert(3));
+        if(type<=1){
+            elements.pushBack(new Feather(where.x,where.y,where.z-Feather.FEATHER_SZ,game));
+        }else if(type>1){
+            int howMany = randInt(1,2);
+            Vector mv = yaw(div(sub(lastTile.vert(0),lastTile.vert(3)),b),OBS,PI/2);
+            for(int i=0;i<howMany;++i) {
+                int height = randInt(150, 450);
+                int width = randInt(200, 400);
+                if(isPointInTriangle(lastTile.vert(0),lastTile.vert(1),lastTile.vert(2),where) || isPointInTriangle(lastTile.vert(0),lastTile.vert(3),lastTile.vert(2),where)) {
+                    elements.pushBack(new DeathSpike(sub(where, VX(0, 0, 10)), width, height, game));
+                }else{
+                    break;
+                }
+                where = add(where,mult(mv,-width));
+            }
+        }
     }
     private int tilesSinceTurn = 0;
     public void generate(int n, int difficulty){
@@ -194,8 +227,7 @@ public class Generator{
                     add(startPos, VX(-a/2,-b/2,0)), // close left
                     add(startPos,VX(a/2,-b/2,0)), // close right
                     add(startPos,VX(a/2,b/2,0)), // far right
-                    add(startPos,VX(-a/2,b/2,0))); // far left
-            lastTile.color = Color.GREEN;
+                    add(startPos,VX(-a/2,b/2,0)),game); // far left
             elements.pushBack(lastTile);
             --n;
         }
@@ -204,9 +236,9 @@ public class Generator{
             int diceRoll = randInt(0,11);
             if(diceRoll>9 && n>=17 && step > 1){
                 int nSteps = randInt(16,min(n-1,32));
-                float dYaw = randDoubleRanges(3,-PI/(1.3f*nSteps),-PI/(5*nSteps),PI/(5*nSteps),PI/(1.3f*nSteps));
+                float dYaw = randFloatRanges(3,-PI/(1.3f*nSteps),-PI/(5*nSteps),PI/(5*nSteps),PI/(1.3f*nSteps));
                 float descent = randIntRanges(-500,-300,400,700);
-                double r = randFloat(1.2f,1.5f,2);
+                float r = randFloat(1.2f,1.5f,2);
                 b*=r;
                 int tilesPerPlatform = randInt(2,4), tilesToDelete = randInt(0,tilesPerPlatform), total = tilesPerPlatform+tilesToDelete;
                 for(int i=0;i<nSteps;++i){
@@ -216,7 +248,7 @@ public class Generator{
                        //lastTile.color = Color.WHITE;
                         --n;
                         ++step;
-                        if(randInt(1,50)==2){
+                        if(randInt(1,10)==2){
                             addAddons();
                         }
                     }else{
@@ -277,11 +309,11 @@ public class Generator{
                 b/=r;
             }else if(diceRoll>2 && n>=6 && step > 2 && tilesSinceTurn > 10){
                 int nSteps = randInt(6,min(n,14));
-                double dYaw = randDoubleRanges(3,-PI/(2.5f*nSteps),-PI/(5.5f*nSteps),PI/(5.5f*nSteps),PI/(2.5f*nSteps));
+                float dYaw = randFloatRanges(3,-PI/(2.5f*nSteps),-PI/(5.5f*nSteps),PI/(5.5f*nSteps),PI/(2.5f*nSteps));
                 for(int i=0;i<nSteps;++i){
                     lYaw+=dYaw;
                     addTile();
-                    if(randInt(1,20)==2 && step > 4){
+                    if(randInt(1,10)==2 && step > 4){
                         addAddons();
                     }
                     ++step;
@@ -292,7 +324,7 @@ public class Generator{
                 int nSteps = min(n,randInt(4,8));
                 for(int i=0;i<nSteps;++i) {
                     addTile();
-                    if(randInt(1,20)==2 && step > 4){
+                    if(randInt(1,10)==2 && step > 4){
                         addAddons();
                     }
                     ++step;

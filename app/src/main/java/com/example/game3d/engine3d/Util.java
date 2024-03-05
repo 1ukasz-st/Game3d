@@ -2,6 +2,7 @@ package com.example.game3d.engine3d;
 
 import static java.lang.Double.max;
 import static java.lang.Double.min;
+import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.cos;
 import static java.lang.Math.floor;
@@ -10,7 +11,8 @@ import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
 import android.graphics.Color;
-import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import java.util.Random;
 
@@ -39,13 +41,10 @@ public class Util {
     public static Vector div(Vector v, float k){
         return new Vector(v.x/k, v.y/k, v.z/k);
     }
-
     public static Vector add(Vector u, Vector v){
         return new Vector(u.x+v.x, u.y+v.y, u.z+v.z);
     }
     public static Vector sub(Vector u, Vector v){ return new Vector(u.x-v.x,u.y-v.y,u.z-v.z);}
-
-
     public static Vector VX(float x, float y, float z){
         return new Vector(x,y,z);
     }
@@ -58,7 +57,6 @@ public class Util {
     public static Vector[] VXS(Vector... args){
         return args;
     }
-
     public static Vector getCentroid(Vector... points) {
         Vector res = new Vector(0.0f,0.0f,0.0f);
         for(Vector v : points){
@@ -67,7 +65,6 @@ public class Util {
         res = div(res, (float) points.length);
         return res;
     }
-
     public static Vector yaw(Vector u, Vector o, float ang){
         Vector u2 = sub(u,o);
         float x2 = (float) (u2.x*cos(ang) - u2.y*sin(ang));
@@ -75,7 +72,6 @@ public class Util {
         Vector u3 = new Vector(x2,y2,u2.z);
         return add(u3,o);
     }
-
     public static Vector pitch(Vector u, Vector o, float ang){
         Vector u2 = sub(u,o);
         float y2 = (float) (u2.y*cos(ang) - u2.z*sin(ang));
@@ -83,7 +79,6 @@ public class Util {
         Vector u3 = new Vector(u2.x,y2,z2);
         return add(u3,o);
     }
-
     public static Vector roll(Vector u, Vector o, float ang){
         Vector u2 = sub(u,o);
         float x2 = (float) (u2.x*cos(ang) - u2.z*sin(ang));
@@ -97,10 +92,9 @@ public class Util {
         float crossZ = v1.x * v2.y - v1.y * v2.x;
         return new Vector(crossX, crossY, crossZ);
     }
-    public static double dotProduct(Vector v1, Vector v2) {
+    public static float dotProduct(Vector v1, Vector v2) {
         return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
     }
-
     public static Vector getNormal(Vector point1, Vector point2, Vector point3) {
         Vector edge1 = sub(point2, point1);
         Vector edge2 = sub(point3, point1);
@@ -109,13 +103,11 @@ public class Util {
         float normalZ = edge1.x * edge2.y - edge1.y * edge2.x;
         Vector norm = new Vector(normalX, normalY, normalZ);
         double d = norm.sqlen();
-        if(d==0.0){
+        if(d<1e-9){
             System.err.println("Normal length zero");
         }
-        return div(norm, (float) sqrt((double)d));
+        return div(norm, (float) sqrt(d));
     }
-
-
     public static float randFloat(float min, float max, int decimalDigits) {
         if (min > max || decimalDigits < 0) {
             throw new IllegalArgumentException("Invalid input values");
@@ -129,12 +121,10 @@ public class Util {
 
         return (float) (Math.round(randomValue * scaleFactor) / scaleFactor);
     }
-
     public static int randInt(int min, int max) {
         return (int)(randFloat(min,max,0));
     }
-
-    public static float randDoubleRanges(int decimalDigits, float... args){
+    public static float randFloatRanges(int decimalDigits, float... args){
         if((args.length & 1) == 1){
             throw new IllegalArgumentException("Odd number of args");
         }
@@ -143,7 +133,6 @@ public class Util {
         float l = args[ind*2], r = args[2*ind+1];
         return randFloat(l,r,decimalDigits);
     }
-
     public static int randIntRanges(int... args){
         if((args.length & 1) == 1){
             throw new IllegalArgumentException("Odd number of args");
@@ -153,11 +142,9 @@ public class Util {
         int l = args[ind*2], r = args[2*ind+1];
         return randInt(l,r);
     }
-
     public static float getBrightness(int x, int y, int z){
         return (float) floor(0.2126f * x + 0.7152f * y + 0.0722f * z);
     }
-
     public static int red(int color){
         return (color>>16)&255;
     }
@@ -167,11 +154,9 @@ public class Util {
     public static int blue(int color){
         return (color )&255;
     }
-
     public static float getBrightness(int color){
         return (float) floor(0.2126f*red(color) + 0.7152f*green(color) + 0.0722f*blue(color));
     }
-
     public static int multBrightness(int color, float f){
         int x = red(color);
         int y = green(color);
@@ -181,7 +166,6 @@ public class Util {
         z = (int) min(255,ceil(z * f));
         return Color.rgb(x,y,z);
     }
-
     public static int adjustBrightness(int color, float mn, float mx){
         float brightness = getBrightness(color);
         if(brightness < mn){
@@ -215,13 +199,8 @@ public class Util {
             color = multBrightness(color,mx/brightness);
         }
         brightness = getBrightness(color);
-        if(!(brightness >=mn && brightness <=mx)){
-            Log.i("NIGGER NIGGER NIGGER",red(color)+","+green(color)+","+blue(color)+" "+getBrightness(color));
-            System.exit(1);
-        }
         return color;
     }
-
     public static int adjustBrightness(int x, int y, int z, float mn, float mx){
         double brightness = getBrightness(x,y,z);
         if (brightness < mn) {
@@ -240,7 +219,6 @@ public class Util {
         assert(brightness >=mn && brightness <=mx);
         return Color.rgb(x,y,z);
     }
-
     public static int randomColor(int minBrightness,int maxBrightness){
         int x = randInt(75,255-30);
         int y = randInt(30,255-x);
@@ -324,7 +302,7 @@ public class Util {
         return (255<<24) | (r<<16) | (g<<8) | b;
     }
 
-    public static double maxAll(double ... args){
+    public static double maxAll(@NonNull double ... args){
         double res=-1e9;
         for(double arg : args){
             res = max(res,arg);
@@ -332,7 +310,7 @@ public class Util {
         return res;
     }
 
-    public static double minAll(double ... args){
+    public static double minAll(@NonNull double ... args){
         double res=1e9;
         for(double arg : args){
             res = min(res,arg);
@@ -373,20 +351,19 @@ public class Util {
             this.b=b;
             this.c=c;
         }
-        public boolean intersectsCuboid(Cuboid other) {
-            if (Math.abs(this.cuboidMid.x - other.cuboidMid.x) > (this.a/2 + other.a/2)) {
+        public boolean intersectsCuboid(@NonNull Cuboid other) {
+            if (abs(this.cuboidMid.x - other.cuboidMid.x) > (this.a/2 + other.a/2)) {
                 return false; // No intersection if there's separation along X
             }
-            if (Math.abs(this.cuboidMid.y - other.cuboidMid.y) > (this.b/2 + other.b/2)) {
+            if (abs(this.cuboidMid.y - other.cuboidMid.y) > (this.b/2 + other.b/2)) {
                 return false; // No intersection if there's separation along Y
             }
-            if (Math.abs(this.cuboidMid.z - other.cuboidMid.z) > (this.c/2 + other.c/2)) {
+            if (abs(this.cuboidMid.z - other.cuboidMid.z) > (this.c/2 + other.c/2)) {
                 return false; // No intersection if there's separation along Z
             }
             return true;
         }
     }
-
     public static Cuboid getBoundingCuboid(Vector... points) {
         if (points == null || points.length == 0) {
             return null;
@@ -427,14 +404,34 @@ public class Util {
         return t0;
     }
 
-    Vector randomPointInTriangle(Vector a, Vector b, Vector c){
-        float i=randFloat(0.0f,1.0f,2), j = randFloat(0.0f,1.0f,2);
-        if(i>j){
-            float tmp=i;
-            i=j;
-            j=tmp;
-        }
-        return add(a,add(mult(sub(b,a),i),mult(sub(c,a),j)));
+    public static Vector randomPointInTriangle(Vector a, Vector b, Vector c) {
+        float r1 = (float)Math.sqrt(Math.random());
+        float r2 = (float)Math.random();
+
+        float lambda1 = 1 - r1;
+        float lambda2 = r1 * (1 - r2);
+        float lambda3 = r1 * r2;
+
+        return add(add(mult(a,lambda1),mult(b,lambda2)),mult(c,lambda3));
+    }
+
+    public static boolean isPointInTriangle(Vector a, Vector b, Vector c, Vector p) {
+        // Compute vectors
+        Vector v0 = sub(b, a);
+        Vector v1 = sub(c, a);
+        Vector v2 = sub(p, a);
+
+        // Compute dot products
+        float dot00 = dotProduct(v0, v0);
+        float dot01 = dotProduct(v0, v1);
+        float dot02 = dotProduct(v0, v2);
+        float dot11 = dotProduct(v1, v1);
+        float dot12 = dotProduct(v1, v2);
+
+        float invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
+        float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+        float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+        return (u >= 0) && (v >= 0) && (u + v < 1);
     }
 
 }

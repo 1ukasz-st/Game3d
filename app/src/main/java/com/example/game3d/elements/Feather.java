@@ -11,6 +11,7 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sin;
 
+import com.example.game3d.GameView;
 import com.example.game3d.engine3d.Util.Cuboid;
 
 import android.graphics.Color;
@@ -36,8 +37,8 @@ public class Feather extends WorldElement {
             throw new RuntimeException(e);
         }
     }
-    public Feather(float x, float y, float z) {
-        super(FEATHER_VERTS,FEATHER_FACES,false);
+    public Feather(float x, float y, float z, GameView game) {
+        super(FEATHER_VERTS,FEATHER_FACES,false,game);
         assert(FEATHER_FACES.length>0);
         move(VX(x,y,z));
         pitch = 0.5f;
@@ -45,17 +46,21 @@ public class Feather extends WorldElement {
         oneColorAndFace = true;
     }
 
+    @Override
     public boolean collidesPlayer(Player player){
-        return cuboid.intersectsCuboid(player.cuboid);
-        /*for(Vector off = VX(-PLR_SX*0.8f,-PLR_SY*0.5f,0);off.x<=PLR_SX*0.8f;off.x+=10.0f) {
-            for(off.z=-PLR_SZ*0.5f;off.z<=PLR_SZ*0.25f;off.z+=10.0f) {
-                double d = rayCuboidDistance(add(player.centroid(), off), VX(0, 1, -0.2f), cuboid);
-                if (d < PLR_SY + player.expectedSpeed && d > 0) {
-                    return true;
-                }
-            }
+        if(abs(vertex(0).y)>2000){
+            return false;
         }
-         return false;*/
+        return cuboid.intersectsCuboid(player.cuboid);
+    }
+
+    @Override
+    public void interactWithPlayer(Player player) {
+        if (!dead()) {
+            game.getHUD().addFeather();
+            die();
+            ++player.jumpsLeft;
+        }
     }
 
     private int t=0;
