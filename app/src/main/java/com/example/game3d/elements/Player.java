@@ -1,10 +1,12 @@
 package com.example.game3d.elements;
 
+import static com.example.game3d.engine3d.Util.OBS;
 import static com.example.game3d.engine3d.Util.PLAYER;
 import static com.example.game3d.engine3d.Util.VX;
 import static com.example.game3d.engine3d.Util.div;
 import static com.example.game3d.engine3d.Util.getCentroid;
 import static com.example.game3d.engine3d.Util.getNormal;
+import static com.example.game3d.engine3d.Util.pointAndPlanePosition;
 
 import com.example.game3d.GameView;
 import com.example.game3d.elements.Generator.Tile;
@@ -15,6 +17,7 @@ import static java.lang.Math.signum;
 import static java.lang.Math.sqrt;
 
 import android.graphics.Color;
+import android.util.Log;
 
 import com.example.game3d.engine3d.Object3D;
 import com.example.game3d.engine3d.Util.Vector;
@@ -23,7 +26,7 @@ import java.io.IOException;
 
 public class Player extends Object3D {
     public static float CAM_YAW = 0.0f;
-    public static final float MIN_SPEED = 75, MAX_SPEED = 120;
+    public static final float MIN_SPEED = 75, MAX_SPEED = 150;
     public float baseSpeed, currSpeed , expectedSpeed ;
     public boolean canJump, waitForJump;
     public float minJumpPower, jumpPower, strongJumpPower, maxJumpPower;
@@ -38,11 +41,11 @@ public class Player extends Object3D {
 
     public Cuboid cuboid;
     public GameView game;
-    public Tile chosenTile = null;
+    public Tile chosenTile = null, tileBelow = null;
 
     @Override
     protected boolean faceSkipped(ObjectFace fc){
-        if(abs(yaw) > 0.02){ // back-face culling
+        /*if(abs(yaw) > 0.02){ // back-face culling
             Vector normal = getNormal(vertex(fc.inds[0]),vertex(fc.inds[1]),vertex(fc.inds[2]));//crossProduct(edge1,edge2);
             normal = div(normal, (float) sqrt(normal.sqlen()));
             Vector v ;
@@ -60,7 +63,8 @@ public class Player extends Object3D {
                 v = getCentroid(vertex(fc.inds[0]),vertex(fc.inds[1]),vertex(fc.inds[2]));
             }
             return v.y > 830 && v.z > 450 - PLR_SZ/2 + 50;
-        }
+        }*/
+        return pointAndPlanePosition(vertex(fc.inds[0]),vertex(fc.inds[1]),vertex(fc.inds[2]),OBS)==-1;
     }
     public Player(GameView game) throws IOException {
         super("opona.obj",Color.BLACK, Color.WHITE,PLAYER,PLR_SX,PLR_SY,PLR_SZ,(float)(PI/2.0),0.0f,0.0f);
@@ -75,8 +79,8 @@ public class Player extends Object3D {
         //  jumpWait = 0;mjumpMaxWait = 20;
         //  slowDownMaxTime = 70; slowDownTime = slowDownMaxTime;
 
-        minJumpPower = 13; jumpPower = 0; maxJumpPower = 60;
-        strongJumpPower = maxJumpPower*0.75f;
+        minJumpPower = 18; jumpPower = 0; maxJumpPower = 60;
+        strongJumpPower = maxJumpPower*0.81f;
 
         move = VX(0,0,0);
         ct=0;
@@ -89,6 +93,30 @@ public class Player extends Object3D {
     public void calculate(){
         super.calculate();
         cuboid = new Cuboid(centroid(),PLR_SX,PLR_SY,PLR_SZ);
+        if (ct > 0) {
+            --ct;
+        } else {
+            yaw -= 0.016 * signum(yaw);
+            roll -= 0.008 * signum(roll);
+            if (abs(yaw) < 0.016) {
+                yaw = 0;
+            }
+            if (abs(roll) < 0.008) {
+                roll = 0;
+            }
+        }
+        if (baseSpeed < expectedSpeed) {
+            baseSpeed += 1.2;
+        }
+    }
+
+    @Override
+    public void invalidate(){
+        super.invalidate();
+        currSpeed = baseSpeed;
+        canJump = false;
+        chosenTile = null;
+        tileBelow = null;
     }
 
 }

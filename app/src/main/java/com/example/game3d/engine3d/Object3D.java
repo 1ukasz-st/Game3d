@@ -7,6 +7,7 @@ import static com.example.game3d.engine3d.Util.SCR_H;
 import static com.example.game3d.engine3d.Util.SCR_W;
 import static com.example.game3d.engine3d.Util.SCR_Y;
 import static com.example.game3d.engine3d.Util.VC;
+import static com.example.game3d.engine3d.Util.VCPY;
 import static com.example.game3d.engine3d.Util.VX;
 import static com.example.game3d.engine3d.Util.VXS;
 import static com.example.game3d.engine3d.Util.Vector;
@@ -35,42 +36,67 @@ import java.util.Arrays;
 import java.util.Comparator;
 
 public class Object3D {
-    public static float MAX_Y = 25000;
+    public static float MAX_Y = 15000;
     public static Paint strokePaint = new Paint();
     public static Paint fillPaint = new Paint();
+    public static Vector moveToScreen = VX(0, 0, 0);
+    private final Path path = new Path();
     public ObjectFace[] faces;
     public float yaw = 0.0f, pitch = 0.0f, roll = 0.0f;
+    public int facesSkipped = 0;
     protected Vector[] verts, tVerts;
     protected boolean facesSorted;
+    protected boolean is_obs = false;
+    protected boolean valid = false;
+    protected boolean oneColorAndFace = false;
+    int lastToDraw = -1;
     private Vector centerMass = null, rotatedCenter = null;
-    private float rectLeft,rectRight,rectTop, rectBottom;
-    public float getRectLeft() {
-        return rectLeft;
-    }
-    public float getRectRight() {
-        return rectRight;
-    }
-    public float getRectTop() {
-        return rectTop;
-    }
-    public float getRectBottom() {
-        return rectBottom;
-    }
-    protected boolean is_obs=false;
+    private float rectLeft, rectRight, rectTop, rectBottom;
 
-    public int nVerts(){
-        return verts.length;
-    }
-
-    public void move(Vector v){
-        for(int i=0;i<verts.length;++i){
-            verts[i].x+=v.x;
-            verts[i].y+=v.y;
-            verts[i].z+=v.z;
+    public Object3D(String filename, int color, int ecolor, Vector mid, float sx, float sy, float sz, float init_yaw, float init_pitch, float init_roll) throws IOException {
+        Pair<Vector[], Face[]> data = loadFromFile(filename, color, ecolor, mid, sx, sy, sz, init_yaw, init_pitch, init_roll);
+        verts = data.first;
+        faces = new ObjectFace[data.second.length];
+        for (int i = 0; i < faces.length; ++i) {
+            faces[i] = new ObjectFace(data.second[i].color, data.second[i].ecolor, data.second[i].inds);
         }
+        facesSorted = true;
+        tVerts = new Vector[verts.length];
+        path.setFillType(Path.FillType.EVEN_ODD);
+        extraInit();
     }
 
-    protected void extraInit(){}
+    public Object3D(Vector[] verts, Face[] faces) {
+        this.verts = new Vector[verts.length];
+        for (int i = 0; i < verts.length; ++i) {
+            this.verts[i] = VC(verts[i]);
+        }
+        tVerts = new Vector[verts.length];
+        this.faces = new ObjectFace[faces.length];
+        for (int i = 0; i < faces.length; ++i) {
+            this.faces[i] = new ObjectFace(faces[i].color, faces[i].ecolor, faces[i].inds);
+        }
+        this.facesSorted = false;
+        extraInit();
+        path.setFillType(Path.FillType.EVEN_ODD);
+
+    }
+
+    public Object3D(Vector[] verts, Face[] faces, boolean facesSorted) {
+        this.verts = new Vector[verts.length];
+        for (int i = 0; i < verts.length; ++i) {
+            this.verts[i] = VC(verts[i]);
+        }
+        tVerts = new Vector[verts.length];
+        this.faces = new ObjectFace[faces.length];
+        for (int i = 0; i < faces.length; ++i) {
+            this.faces[i] = new ObjectFace(faces[i].color, faces[i].ecolor, faces[i].inds);
+        }
+        this.facesSorted = facesSorted;
+        path.setFillType(Path.FillType.EVEN_ODD);
+        extraInit();
+
+    }
 
     public static Pair<Vector[], Face[]> loadFromFile(String filename, int color, int ecolor, Vector mid, float sx, float sy, float sz, float init_yaw, float init_pitch, float init_roll) throws IOException {
         try {
@@ -107,17 +133,17 @@ public class Object3D {
             float maxz = -1000000.0f, minz = 1000000.0f;
             Vector currMid = getCentroid(verts);
             for (int i = 0; i < verts.length; ++i) {
-                verts[i] = sub(verts[i],currMid);
+                verts[i] = sub(verts[i], currMid);
             }
             for (int i = 0; i < verts.length; ++i) {
                 if (init_yaw != 0.0f) {
-                    verts[i] = yaw(verts[i], VX(0,0,0), init_yaw);
+                    verts[i] = yaw(verts[i], VX(0, 0, 0), init_yaw);
                 }
-                if (init_pitch != 0.0f){
-                    verts[i] = pitch(verts[i], VX(0,0,0), init_pitch);
+                if (init_pitch != 0.0f) {
+                    verts[i] = pitch(verts[i], VX(0, 0, 0), init_pitch);
                 }
                 if (init_roll != 0.0f) {
-                    verts[i] = roll(verts[i], VX(0,0,0), init_roll);
+                    verts[i] = roll(verts[i], VX(0, 0, 0), init_roll);
                 }
                 maxx = max(maxx, verts[i].x);
                 minx = min(minx, verts[i].x);
@@ -134,54 +160,10 @@ public class Object3D {
                 verts[i] = add(verts[i], mid);
             }
             reader.close();
-            return new Pair<>(verts,faceList.toArray(new Face[0]));
+            return new Pair<>(verts, faceList.toArray(new Face[0]));
         } catch (IOException e) {
             throw new IOException();
         }
-    }
-
-    public Object3D(String filename, int color, int ecolor, Vector mid, float sx, float sy, float sz, float init_yaw, float init_pitch, float init_roll) throws IOException {
-        Pair<Vector[], Face[]> data = loadFromFile(filename,color,ecolor,mid,sx,sy,sz,init_yaw,init_pitch,init_roll);
-        verts = data.first;
-        faces = new ObjectFace[data.second.length];
-        for(int i=0;i<faces.length;++i){
-            faces[i] = new ObjectFace(data.second[i].color,data.second[i].ecolor,data.second[i].inds);
-        }
-        facesSorted = true;
-        tVerts = new Vector[verts.length];
-        path.setFillType(Path.FillType.EVEN_ODD);
-        extraInit();
-    }
-    public Object3D(Vector[] verts, Face[] faces) {
-        this.verts = new Vector[verts.length];
-        for(int i=0;i<verts.length;++i){
-            this.verts[i] = VC(verts[i]);
-        }
-        tVerts = new Vector[verts.length];
-        this.faces = new ObjectFace[faces.length];
-        for (int i = 0; i < faces.length; ++i) {
-            this.faces[i] = new ObjectFace(faces[i].color, faces[i].ecolor, faces[i].inds);
-        }
-        this.facesSorted = false;
-        extraInit();
-        path.setFillType(Path.FillType.EVEN_ODD);
-
-    }
-
-    public Object3D(Vector[] verts, Face[] faces, boolean facesSorted) {
-        this.verts = new Vector[verts.length];
-        for(int i=0;i<verts.length;++i){
-            this.verts[i] = VC(verts[i]);
-        }
-        tVerts = new Vector[verts.length];
-        this.faces = new ObjectFace[faces.length];
-        for (int i = 0; i < faces.length; ++i) {
-            this.faces[i] = new ObjectFace(faces[i].color, faces[i].ecolor, faces[i].inds);
-        }
-        this.facesSorted = facesSorted;
-        path.setFillType(Path.FillType.EVEN_ODD);
-        extraInit();
-
     }
 
     public static Face FC(int color, int ecolor, int... inds) {
@@ -228,54 +210,88 @@ public class Object3D {
     }
 
     public static Vector project(Vector vert) {
-        if(vert.y<0){
-            return VX(-10000,-10000,-10000);
+        if (vert.y < 0) {
+            return VX(-10000, -10000, -10000);
         }
-        return mult(vert,  SCR_Y / vert.y);
+        return mult(vert, SCR_Y / vert.y);
     }
 
-    public static Vector moveToScreen = VX(0,0,0);
+    public float getRectLeft() {
+        return rectLeft;
+    }
+
+    public float getRectRight() {
+        return rectRight;
+    }
+
+    public float getRectTop() {
+        return rectTop;
+    }
+
+    public float getRectBottom() {
+        return rectBottom;
+    }
+
+    public int nVerts() {
+        return verts.length;
+    }
+
+    public void move(Vector v) {
+        for (int i = 0; i < verts.length; ++i) {
+            verts[i].x += v.x;
+            verts[i].y += v.y;
+            verts[i].z += v.z;
+        }
+    }
+
+    protected void extraInit() {
+    }
+
     public Vector vertex(int ind) {
-        return tVerts[ind];
-    }
-    public Vector pVertex(int ind) {
-        return add(project(tVerts[ind]),moveToScreen);
+        return VCPY(tVerts[ind]);
     }
 
-    public boolean outOfScreen(){
-        float maxx=-1e9f,maxz=-1e9f;
-        float minx=1e9f,minz=1e9f;
-        for(int i=0;i<nVerts();++i){
+    public Vector pVertex(int ind) {
+        return add(project(tVerts[ind]), moveToScreen);
+    }
+
+    public boolean outOfScreen() {
+        float maxx = -1e9f, maxz = -1e9f;
+        float minx = 1e9f, minz = 1e9f;
+        for (int i = 0; i < nVerts(); ++i) {
             Vector v = pVertex(i);
-            maxx = max(maxx,v.x);
-            minx = min(minx,v.x);
-            maxz = max(maxz,v.z);
-            minz = min(minz,v.z);
+            maxx = max(maxx, v.x);
+            minx = min(minx, v.x);
+            maxz = max(maxz, v.z);
+            minz = min(minz, v.z);
         }
-        return maxx<0 || minx>SCR_W || maxz<0 || minz>SCR_H;
+        return maxx < 0 || minx > SCR_W || maxz < 0 || minz > SCR_H;
     }
-    public boolean slightlyOutOfScreen(){
-        float miny=1e9f;
-        for(int i=0;i<nVerts();++i){
-            miny = min(miny,vertex(i).y);
+
+    public boolean slightlyOutOfScreen() {
+        float miny = 1e9f;
+        for (int i = 0; i < nVerts(); ++i) {
+            miny = min(miny, vertex(i).y);
         }
-        return outOfScreen() || miny<0;
+        return outOfScreen() || miny < 0;
     }
+
     public Vector centroid() {
         return VX(rotatedCenter.x, rotatedCenter.y, rotatedCenter.z);
     }
 
-    private Vector rotVert(Vector vert){
+    private Vector rotVert(Vector vert) {
         Vector res = VX(vert.x, vert.y, vert.z);
-        if (roll != 0.0f)  res= roll(res, centerMass, roll);
+        if (roll != 0.0f) res = roll(res, centerMass, roll);
         if (pitch != 0.0f) res = pitch(res, centerMass, pitch);
         if (yaw != 0.0f) res = yaw(res, centerMass, yaw);
         if (CAM_YAW != 0.0f && !is_obs) res = yaw(res, PLAYER, CAM_YAW);
         return res;
     }
+
     public int partitionFaces() {
         int i = 0;
-        int j = faces.length-1;
+        int j = faces.length - 1;
         while (i <= j) {
             while (i <= j && !_faceSkipped(faces[i])) {
                 i++;
@@ -291,13 +307,11 @@ public class Object3D {
                 j--;
             }
         }
-        return i-1;
+        return i - 1;
     }
 
-    int lastToDraw = -1;
-
-    public void calculate(){
-        if(centerMass==null){
+    public void calculate() {
+        if (centerMass == null) {
             centerMass = getCentroid(verts);
         }
         rectLeft = 1e9f;
@@ -308,54 +322,47 @@ public class Object3D {
         for (int i = 0; i < verts.length; ++i) {
             tVerts[i] = rotVert(verts[i]);
             Vector p = pVertex(i);
-            rectLeft = min(rectLeft,p.x);
-            rectRight = max(rectRight,p.x);
-            rectTop = min(rectTop,p.z);
-            rectBottom = max(rectBottom,p.z);
+            rectLeft = min(rectLeft, p.x);
+            rectRight = max(rectRight, p.x);
+            rectTop = min(rectTop, p.z);
+            rectBottom = max(rectBottom, p.z);
         }
         rotatedCenter = rotVert(centerMass);
         lastToDraw = partitionFaces();
         if (facesSorted && !oneColorAndFace) {
-            Arrays.sort(faces, 0, lastToDraw+1, new Painter());
+            Arrays.sort(faces, 0, lastToDraw + 1, new Painter());
         }
         valid = true;
     }
 
-    protected boolean valid = false;
-    public boolean isValid(){
+    public boolean isValid() {
         return valid;
     }
-    private final Path path = new Path();
 
-
-
-    protected boolean faceSkipped(ObjectFace face){
+    protected boolean faceSkipped(ObjectFace face) {
         return false;
     }
-    private boolean _faceSkipped(ObjectFace face){
-        boolean sk =faceSkipped(face);
-        if(sk){
+
+    private boolean _faceSkipped(ObjectFace face) {
+        boolean sk = faceSkipped(face);
+        if (sk) {
             ++facesSkipped;
         }
         return sk;
     }
 
-    public int facesSkipped = 0;
-
-    protected boolean oneColorAndFace = false;
     public boolean draw(Canvas canvas) {
         centerMass = getCentroid(verts);
-        facesSkipped=0;
-        if(rotVert(verts[0]).y>MAX_Y){
+        if (rotVert(verts[0]).y > MAX_Y) {
             return false;
         }
-        if(!isValid()) {
+        if (!isValid()) {
             calculate();
         }
-        if(outOfScreen()){
+        if (outOfScreen()) {
             return false;
         }
-        if(oneColorAndFace && faces[0].color != Color.TRANSPARENT){
+        if (oneColorAndFace && faces[0].color != Color.TRANSPARENT) {
             fillPaint.setStyle(Paint.Style.FILL);
             fillPaint.setColor(faces[0].color);
             path.rewind();
@@ -367,7 +374,8 @@ public class Object3D {
                 boolean first = true;
                 for (int ind : face.inds) {
                     if (tVerts[ind].y < 0) {
-                        continue;
+                        tVerts[ind].y = 1;
+                        // continue;
                     }
                     Vector projected = pVertex(ind);
                     if (first) {
@@ -381,7 +389,7 @@ public class Object3D {
             }
             canvas.drawPath(path, fillPaint);
             canvas.drawPath(path, strokePaint);
-        }else if(!oneColorAndFace){
+        } else if (!oneColorAndFace) {
             for (int i = 0; i <= lastToDraw; ++i) {
                 ObjectFace face = faces[i];
                 if (face.ecolor != Color.TRANSPARENT) {
@@ -394,7 +402,8 @@ public class Object3D {
                 boolean first = true;
                 for (int ind : face.inds) {
                     if (tVerts[ind].y < 0) {
-                        continue;
+                        tVerts[ind].y = 1;
+                       // continue;
                     }
                     Vector projected = pVertex(ind);
                     if (first) {
@@ -418,6 +427,7 @@ public class Object3D {
     }*/
 
     public void invalidate() {
+        facesSkipped = 0;
         valid = false;
         centerMass = null;
         rotatedCenter = null;
@@ -445,12 +455,12 @@ public class Object3D {
 
         public double getDepth() {
             double total = 0.0;
-            double inum = 1.0f/((float)(inds.length));
+            double inum = 1.0f / ((float) (inds.length));
             for (int ind : inds) {
                 double x = tVerts[ind].x, y = tVerts[ind].y, z = tVerts[ind].z;
-                total += (x * x) + (y * y)  + (z * z) ;
+                total += (x * x) + (y * y) + (z * z);
             }
-            return total*inum;
+            return total * inum;
         }
     }
 

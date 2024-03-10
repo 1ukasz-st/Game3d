@@ -434,4 +434,26 @@ public class Util {
         return (u >= 0) && (v >= 0) && (u + v < 1);
     }
 
+
+    public static int pointAndPlanePosition(Vector A, Vector B, Vector C, Vector P) {
+        Vector AB = sub(B, A);
+        Vector AC = sub(C, A);
+        Vector AP = sub(P, A);
+
+        Vector normal = crossProduct(AB, AC);
+        double dotProduct = dotProduct(normal, AP);
+
+        if (dotProduct > 0) {
+            return 1; // P is to the right of the plane
+        } else if (dotProduct < 0) {
+            return -1; // P is to the left of the plane
+        } else {
+            return 0; // P is on the plane
+        }
+    }
+
+    public static float choice(float... args){
+        return args[randInt(0,args.length-1)];
+    }
+
 }

@@ -55,16 +55,11 @@ public class DeathSpike extends WorldElement {
         player.game.startResetting();
     }
 
-    /*@Override
+    @Override
     protected boolean faceSkipped(ObjectFace fc){
-        Vector normal = getNormal(vertex(fc.inds[0]),vertex(fc.inds[1]),vertex(fc.inds[2]));
-        normal = div(normal, (float) sqrt(normal.sqlen()));
-        Vector v ;
-        if(fc.inds.length==4){
-            v = getCentroid(vertex(fc.inds[0]),vertex(fc.inds[1]),vertex(fc.inds[2]),vertex(fc.inds[3]));
-        }else{
-            v = getCentroid(vertex(fc.inds[0]),vertex(fc.inds[1]),vertex(fc.inds[2]));
-        }
-        return normal.y > 0.1;
-    }*/
+        //Vector normal = getNormal(vertex(fc.inds[0]),vertex(fc.inds[1]),vertex(fc.inds[2]));
+        //normal = div(normal, (float) sqrt(normal.sqlen()));
+        //return normal.y > 0.1;
+        return pointAndPlanePosition(vertex(fc.inds[0]),vertex(fc.inds[1]),vertex(fc.inds[2]),OBS)==-1;
+    }
 }
