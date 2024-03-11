@@ -291,13 +291,13 @@ public class Generator {
             int curr_r = (game.getGenerator().tileColor >> 16) & 0xFF;
             int curr_g = (game.getGenerator().tileColor >> 8) & 0xFF;
             int curr_b = game.getGenerator().tileColor & 0xFF;
-            if (isBackHill()) {
+           // if (isBackHill()) {
                 if (pointAndPlanePosition(vertex(0),vertex(1),vertex(2),OBS)==1) {
-                    brightness_mul *= 0.91;
-                } else {
+                    brightness_mul *= 0.90;
+                } else if (isBackHill()) {
                     brightness_mul = 1;
                 }
-            }
+          //  }
             curr_r = (int) (min(255, (double) (curr_r) * brightness_mul));
             curr_g = (int) (min(255, (double) (curr_g) * brightness_mul));
             curr_b = (int) (min(255, (double) (curr_b) * brightness_mul));

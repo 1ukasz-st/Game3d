@@ -1,6 +1,8 @@
 package com.example.game3d.elements;
 
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Path;
 import android.util.Log;
 
 import static com.example.game3d.elements.Generator.WorldElement;
@@ -27,8 +29,8 @@ public class DeathSpike extends WorldElement {
                 new Face(multBrightness(game.getGenerator().tileColor,0.65f),Color.WHITE,1,2,4),
                 new Face(multBrightness(game.getGenerator().tileColor,0.65f),Color.WHITE,2,3,4),
                 new Face(multBrightness(game.getGenerator().tileColor,0.65f),Color.WHITE,3,0,4),
-                new Face(multBrightness(game.getGenerator().tileColor,0.65f),Color.WHITE,0,1,2,3),
-        },true,game);
+                //new Face(multBrightness(game.getGenerator().tileColor,0.65f),Color.WHITE,0,1,2,3),
+        },false,game);
         this.a=a;
         this.c=c;
     }

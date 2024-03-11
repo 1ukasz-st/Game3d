@@ -7,6 +7,7 @@ import static com.example.game3d.engine3d.Util.div;
 import static com.example.game3d.engine3d.Util.getCentroid;
 import static com.example.game3d.engine3d.Util.getNormal;
 import static com.example.game3d.engine3d.Util.pointAndPlanePosition;
+import static com.example.game3d.engine3d.Util.yaw;
 
 import com.example.game3d.GameView;
 import com.example.game3d.elements.Generator.Tile;
@@ -119,4 +120,17 @@ public class Player extends Object3D {
         tileBelow = null;
     }
 
+
+    public void jump(boolean noFooting){
+        float jp = jumpPower < strongJumpPower ? maxJumpPower * 0.3f : maxJumpPower;
+        float k = (float) (sqrt(1 + jp / maxJumpPower) - 1);
+        float j = expectedSpeed < 100 ? k * maxJumpPower * 0.75f + currSpeed : k * maxJumpPower * 0.9f + currSpeed*0.75f ;
+        move = VX(0, j * 0.7f, -j * 1.1f);
+        move = yaw(move, OBS, -CAM_YAW);
+        waitForJump = false;
+        jumpPower = 0;
+        if(noFooting){
+            --jumpsLeft;
+        }
+    }
 }

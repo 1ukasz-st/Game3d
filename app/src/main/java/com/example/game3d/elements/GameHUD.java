@@ -3,15 +3,20 @@ package com.example.game3d.elements;
 import static com.example.game3d.engine3d.Object3D.FC;
 import static com.example.game3d.engine3d.Object3D.FCS;
 import static com.example.game3d.engine3d.Object3D.loadFromFile;
+import static com.example.game3d.engine3d.Object3D.moveToScreen;
+import static com.example.game3d.engine3d.Object3D.project;
+import static com.example.game3d.engine3d.Util.GAMEFONT;
 import static com.example.game3d.engine3d.Util.SCR_H;
 import static com.example.game3d.engine3d.Util.SCR_W;
 import static com.example.game3d.engine3d.Util.SCR_Y;
 import static com.example.game3d.engine3d.Util.VX;
 import static com.example.game3d.engine3d.Util.VXS;
+import static com.example.game3d.engine3d.Util.add;
 import static com.example.game3d.engine3d.Util.blue;
 import static com.example.game3d.engine3d.Util.green;
 import static com.example.game3d.engine3d.Util.multBrightness;
 import static com.example.game3d.engine3d.Util.red;
+import static com.example.game3d.engine3d.Util.roundTo;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
@@ -21,6 +26,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Typeface;
 import android.util.Pair;
 
 import com.example.game3d.GameView;
@@ -35,8 +41,7 @@ import com.example.game3d.engine3d.Util.Vector;
 
 public class GameHUD {
     private GameView game;
-    private Paint p=new Paint();
-    private Paint strokeP = new Paint(), fillP = new Paint();
+    private Paint strokeP = new Paint(), fillP = new Paint(), paint =new Paint();
 
     private Path reservedPath = new Path();
     private static Vector[] FEATHER_ICON_VERTS;
@@ -50,7 +55,8 @@ public class GameHUD {
         FEATHER_ICON_FACES = data.second;
     }
 
-    public void addFeather(){
+
+    /*public void addFeather(){
         icons.pushBack(new Object3D(FEATHER_ICON_VERTS, FEATHER_ICON_FACES) {
             @Override
             protected void extraInit() {
@@ -59,28 +65,38 @@ public class GameHUD {
                 is_obs = true;
             }
         });
-        icons.getLast().move(VX(currX - SCR_W / 2, 0, currY - SCR_H / 2));
-        currX += iconW +30;
-        if(currX>SCR_W){
-            currX = 60;
-            currY += iconH +30;
+        icons.getLast().move(VX(iconX - SCR_W / 2, 0, iconY - SCR_H / 2));
+        iconX += iconW +30;
+        if(iconX >SCR_W){
+            iconX = 60;
+            iconY += iconH +30;
         }
-    }
-    public void removeFeather(){
+    }*/
+   /* public void removeFeather(){
         icons.removeLast();
-        currX -= iconW +30;
-        if(currX<=30){
-            currX = 30;
-            currY -= iconH +30;
+        iconX -= iconW +30;
+        if(iconX <=30){
+            iconX = 30;
+            iconY -= iconH +30;
         }
-    }
+    }*/
 
-    private Object3D arrow;
+    private Object3D arrow, iconFeather;
 
     public GameHUD(GameView gameView){
         this.game = gameView;
         strokeP.setStyle(Paint.Style.STROKE);
         fillP.setStyle(Paint.Style.FILL);
+
+        iconFeather = new Object3D(FEATHER_ICON_VERTS, FEATHER_ICON_FACES) {
+            @Override
+            protected void extraInit() {
+                facesSorted = false;
+                oneColorAndFace = true;
+                is_obs = true;
+            }
+        };
+        iconFeather.move(VX(iconX - SCR_W / 2, 0, iconY - SCR_H / 2));
         arrow=new Object3D(VXS(
                 VX(-iconW/4.0f,SCR_Y-iconT/2.0f, -iconH/2.0f), // 0
                 VX(iconW/4.0f,SCR_Y-iconT/2.0f,-iconH/2.0f),   // 1
@@ -100,7 +116,7 @@ public class GameHUD {
                 is_obs = true;
             }
         };
-        arrow.move(VX(SCR_W/2 - iconW - 20,0,-SCR_H/2 + 350));
+        arrow.move(VX(SCR_W/2 - iconW - 20,0,-SCR_H/2 + iconY));
     }
     private void fillTriangle(Canvas canvas, float x1, float y1, float x2, float y2, float x3, float y3, int color){
         reservedPath.rewind();
@@ -155,20 +171,12 @@ public class GameHUD {
         canvas.drawRect(x1,y1,x2,y2,fillP);
         fillP.setColor(lc);
     }
-    private int darkenColor(int color) {
-        float[] hsv = new float[3];
-        Color.colorToHSV(color, hsv);
-        hsv[2] *= 0.99f; // decrease value/brightness to darken
-        return Color.HSVToColor(hsv);
-    }
-
     private final float barIndentX = 50, jumpBarIndentY = 100, barMaxWidth = SCR_W - 2* barIndentX, barHeight = 80, timeBarIndentY = 100 + barHeight + 10;
-    private int currX = 60, currY = 350;
+    private int iconX = 60, iconY = 350;
     private final float markerWidth = 40,markerHeight = 200;
     private static final int iconW = 40, iconT = 20, iconH = 120;
     private static final float triangleWidth = 27, triangleHeight = 25;
     Path path = new Path();
-
     private void drawBarWithMarkersOutline(Canvas canvas, float x0, float y0, float x1, float y1, float progress, int outlineColor, int fillColor, Float... markerPositions){
 
         fillRect(canvas,x0,y0,x0+progress,y1,fillColor);
@@ -212,7 +220,21 @@ public class GameHUD {
 
     }
 
-    int time=0;
+    private long airTimeTime=0;
+
+    public void drawText(Canvas canvas, String text, float x, float y, float fontSize, int color) {
+        int pc = paint.getColor();
+        float pts = paint.getTextSize();
+        Typeface ptf = paint.getTypeface();
+        paint.setColor(color);
+        paint.setTextSize(fontSize);
+        paint.setTypeface(GAMEFONT);
+        canvas.drawText(text, x, y, paint);
+        paint.setColor(pc);
+        paint.setTextSize(pts);
+        paint.setTypeface(ptf);
+    }
+
 
     public void draw(Canvas canvas){
         if(game.isResetting()){
@@ -245,35 +267,54 @@ public class GameHUD {
             arrow.invalidate();
         }
 
-        for(int i = 0; i< icons.size(); ++i) {
+        /*for(int i = 0; i< icons.size(); ++i) {
             icons.get(i).yaw += 0.02f;
             icons.get(i).draw(canvas);
             icons.get(i).invalidate();
+        }*/
+        if(game.getPlayer().jumpsLeft>0){
+            iconFeather.draw(canvas);
+            iconFeather.yaw+=0.02f;
+            Vector pc = add(project(iconFeather.centroid()),moveToScreen);
+            drawText(canvas,""+game.getPlayer().jumpsLeft,(pc.x-1+iconW/2),(pc.z+iconH*0.4f),35 ,Color.WHITE);
+            //canvas.drawText((pc.x-1+iconW/2)+" "+(pc.z+iconH*0.4f),500,600,fillP);
+            iconFeather.invalidate();
         }
 
-        //drawDebug(canvas);
+        if(game.getPlayer().airTime>0){
+            if(airTimeTime==0){
+                airTimeTime = System.nanoTime();
+            }
+            if(game.getPlayer().airTime>65) {
+                drawText(canvas, "AIR TIME " + roundTo((float) (System.nanoTime() - airTimeTime) / 1000000000.0f, 3), 0.5f * SCR_W - 5.5f * 60, iconY, 80, Color.WHITE);
+            }
+        }else{
+            airTimeTime=0;
+        }
 
 
-        ++time;
+       // drawDebug(canvas);
+
 
     }
 
     public void drawDebug(Canvas canvas){
-        p.setTextSize(40);
-        p.setColor(Color.WHITE);
+        paint.setTextSize(40);
+        paint.setColor(Color.WHITE);
         int rr = red(game.getTileColor());
         int gg = green(game.getTileColor());
         int bb = blue(game.getTileColor());
-        canvas.drawText("R: "+rr,100,150,p);
-        canvas.drawText("G: "+gg,100,200,p);
-        canvas.drawText("B: "+bb,100,250,p);
-        canvas.drawText("brightness: "+(int)(0.2126 * rr + 0.7152 * gg + 0.0722 * bb),100,300,p);
-        canvas.drawText("yaw: "+(game.getPlayer().yaw),100,350,p);
-        canvas.drawText("faces skipped: "+(game.getPlayer().facesSkipped),100,400,p);
-        canvas.drawText("BS: "+game.getPlayer().baseSpeed,100,450,p);
-        canvas.drawText("CS: "+game.getPlayer().currSpeed,100,500,p);
-        canvas.drawText("Tiles optimized: "+game.getTilesOptimized(),100,550,p);
-        canvas.drawText("Tiles total: "+game.elementCount(),100,600,p);
-        canvas.drawText("Air time: "+game.getPlayer().airTime,100,650,p);
+        canvas.drawText("R: "+rr,100,150, paint);
+        canvas.drawText("G: "+gg,100,200, paint);
+        canvas.drawText("B: "+bb,100,250, paint);
+        canvas.drawText("brightness: "+(int)(0.2126 * rr + 0.7152 * gg + 0.0722 * bb),100,300, paint);
+        canvas.drawText("yaw: "+(game.getPlayer().yaw),100,350, paint);
+        canvas.drawText("faces skipped: "+(game.getPlayer().facesSkipped),100,400, paint);
+        canvas.drawText("BS: "+game.getPlayer().baseSpeed,100,450, paint);
+        canvas.drawText("CS: "+game.getPlayer().currSpeed,100,500, paint);
+        canvas.drawText("Tiles optimized: "+game.getTilesOptimized(),100,550, paint);
+        canvas.drawText("Tiles total: "+game.elementCount(),100,600, paint);
+        canvas.drawText("Air time: "+game.getPlayer().airTime,100,650, paint);
+        canvas.drawText("Jumps Left: "+game.getPlayer().jumpsLeft,100,700, paint);
     }
 }

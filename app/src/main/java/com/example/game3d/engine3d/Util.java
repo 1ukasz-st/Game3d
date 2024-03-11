@@ -6,11 +6,13 @@ import static java.lang.Math.abs;
 import static java.lang.Math.ceil;
 import static java.lang.Math.cos;
 import static java.lang.Math.floor;
+import static java.lang.Math.pow;
 import static java.lang.Math.signum;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
 import android.graphics.Color;
+import android.graphics.Typeface;
 
 import androidx.annotation.NonNull;
 
@@ -20,6 +22,8 @@ public class Util {
     public static float SCR_W, SCR_H;
     public static final float SCR_Y = 1000.0f;
     public static final Vector PLAYER = new Vector(0,800,450), OBS = new Vector(0.0f,0.0f,0.0f);
+
+    public static Typeface GAMEFONT;
 
     public static float PI = (float)(Math.PI);
 
@@ -117,7 +121,7 @@ public class Util {
         }
         Random random = new Random();
         double randomValue = min + (random.nextDouble() * (max - min));
-        double scaleFactor = Math.pow(10, decimalDigits);
+        double scaleFactor = pow(10, decimalDigits);
 
         return (float) (Math.round(randomValue * scaleFactor) / scaleFactor);
     }
@@ -454,6 +458,11 @@ public class Util {
 
     public static float choice(float... args){
         return args[randInt(0,args.length-1)];
+    }
+
+    public static float roundTo(float what, int digits){
+        long mult = (long) (what*pow(10,digits));
+        return (float)((float)(mult/pow(10,digits)));
     }
 
 }

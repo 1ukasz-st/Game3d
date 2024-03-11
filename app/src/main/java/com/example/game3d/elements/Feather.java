@@ -57,7 +57,7 @@ public class Feather extends WorldElement {
     @Override
     public void interactWithPlayer(Player player) {
         if (!dead()) {
-            game.getHUD().addFeather();
+            //game.getHUD().addFeather();
             die();
             ++player.jumpsLeft;
         }
