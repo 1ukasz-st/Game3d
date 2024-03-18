@@ -368,7 +368,7 @@ public class Object3D {
             path.rewind();
             strokePaint.setStyle(Paint.Style.STROKE);
             strokePaint.setColor(faces[0].ecolor);
-            path.setFillType(Path.FillType.WINDING);
+            path.setFillType(Path.FillType.EVEN_ODD);
             for (int i = 0; i <= lastToDraw; ++i) {
                 ObjectFace face = faces[i];
                 boolean first = true;
@@ -406,6 +406,78 @@ public class Object3D {
                        // continue;
                     }
                     Vector projected = pVertex(ind);
+                    if (first) {
+                        path.moveTo(projected.x, projected.z);
+                        first = false;
+                    } else {
+                        path.lineTo(projected.x, projected.z);
+                    }
+                }
+                path.close();
+                canvas.drawPath(path, fillPaint);
+                if (face.ecolor != Color.TRANSPARENT) {
+                    canvas.drawPath(path, strokePaint);
+                }
+            }
+        }
+        return true;
+    }
+
+    public boolean drawWithOffset(Canvas canvas, Vector offset) {
+        centerMass = getCentroid(verts);
+        if (rotVert(verts[0]).y > MAX_Y) {
+            return false;
+        }
+        if (!isValid()) {
+            calculate();
+        }
+        if (outOfScreen()) {
+            return false;
+        }
+        if (oneColorAndFace && faces[0].color != Color.TRANSPARENT) {
+            fillPaint.setStyle(Paint.Style.FILL);
+            fillPaint.setColor(faces[0].color);
+            path.rewind();
+            strokePaint.setStyle(Paint.Style.STROKE);
+            strokePaint.setColor(faces[0].ecolor);
+            path.setFillType(Path.FillType.EVEN_ODD);
+            for (int i = 0; i <= lastToDraw; ++i) {
+                ObjectFace face = faces[i];
+                boolean first = true;
+                for (int ind : face.inds) {
+                    if (tVerts[ind].y < 0) {
+                        tVerts[ind].y = 1;
+                        // continue;
+                    }
+                    Vector projected = add(offset,pVertex(ind));
+                    if (first) {
+                        path.moveTo(projected.x, projected.z);
+                        first = false;
+                    } else {
+                        path.lineTo(projected.x, projected.z);
+                    }
+                }
+                path.close();
+            }
+            canvas.drawPath(path, fillPaint);
+            canvas.drawPath(path, strokePaint);
+        } else if (!oneColorAndFace) {
+            for (int i = 0; i <= lastToDraw; ++i) {
+                ObjectFace face = faces[i];
+                if (face.ecolor != Color.TRANSPARENT) {
+                    strokePaint.setStyle(Paint.Style.STROKE);
+                    strokePaint.setColor(face.ecolor);
+                }
+                path.rewind();
+                fillPaint.setStyle(Paint.Style.FILL);
+                fillPaint.setColor(face.color);
+                boolean first = true;
+                for (int ind : face.inds) {
+                    if (tVerts[ind].y < 0) {
+                        tVerts[ind].y = 1;
+                        // continue;
+                    }
+                    Vector projected = add(offset,pVertex(ind));
                     if (first) {
                         path.moveTo(projected.x, projected.z);
                         first = false;

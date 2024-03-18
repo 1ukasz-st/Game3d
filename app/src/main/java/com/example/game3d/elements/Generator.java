@@ -11,6 +11,7 @@ import static com.example.game3d.engine3d.Util.Vector;
 import static com.example.game3d.engine3d.Util.add;
 import static com.example.game3d.engine3d.Util.choice;
 import static com.example.game3d.engine3d.Util.div;
+import static com.example.game3d.engine3d.Util.getCentroid;
 import static com.example.game3d.engine3d.Util.isPointInTriangle;
 import static com.example.game3d.engine3d.Util.mult;
 import static com.example.game3d.engine3d.Util.pointAndPlanePosition;
@@ -24,6 +25,7 @@ import static com.example.game3d.engine3d.Util.yaw;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.lang.Math.signum;
 import static java.lang.Math.sin;
 import static java.lang.Math.tan;
 
@@ -39,7 +41,7 @@ public class Generator {
 
     public static final int MAX_TILES = 120, MIN_TILES = 70;
     public int tileColor;
-    public float a = 1400, b = 500;
+    public float a = 1450, b = 500;
     public FixedMaxSizeDeque<WorldElement> elements = new FixedMaxSizeDeque<>(MAX_TILES + 100);
     private final GameView game;
     private final Vector startPos = VX(0, 0, 750);
@@ -75,6 +77,7 @@ public class Generator {
         lastTile = new Tile(closeLeft, closeRight, farRight, farLeft, game);
         elements.pushBack(lastTile);
         ++tilesSinceTurn;
+        ++tilesSinceSpeedup;
     }
 
     float f(float x) {
@@ -82,17 +85,22 @@ public class Generator {
     }
 
     float g(float x) {
-        double v = 1 - sin(x * 0.5f) * sin(x * 0.5f) * sin(x * 0.5f) * sin(x * 0.5f);
-        return 0.5f * (float) (1 - v * v);
+        /*double v = 1 - sin(x * 0.5f) * sin(x * 0.5f) * sin(x * 0.5f) * sin(x * 0.5f);
+        return 0.5f * (float) (1 - v * v);*/
+        double u = x - (x*x*x/3.0f) + (x*x*x*x*x/2.0f);
+        double v = 1.0f - u*u;
+        return (float) (0.3f*(1.0f-v*v));
     }
 
     void addAddons() {
-        int type = randInt(0, 5);
+        int type = randInt(0, 10);
         Vector[] pos = new Vector[]{randomPointInTriangle(lastTile.vert(0), lastTile.vert(1), lastTile.vert(2)), randomPointInTriangle(lastTile.vert(0), lastTile.vert(3), lastTile.vert(2))};
         Vector where = pos[randInt(0, 1)]; //getCentroid(lastTile.vert(0),lastTile.vert(1),lastTile.vert(2),lastTile.vert(3));
-        if (type <= 1) {
+        if (type  <= 1) {
             elements.pushBack(new Feather(where.x, where.y, where.z - Feather.FEATHER_SZ, game));
-        } else if (type > 1) {
+        } else if(type==2){
+            elements.pushBack(new Potion(where.x, where.y, where.z - Potion.POTION_SZ - 40, game));
+        }else{
             int howMany = randInt(1, 2);
             Vector mv = yaw(div(sub(lastTile.vert(0), lastTile.vert(3)), b), OBS, PI / 2);
             for (int i = 0; i < howMany; ++i) {
@@ -108,6 +116,17 @@ public class Generator {
         }
     }
 
+    void addPortal() {
+        int type = randInt(0, 10);
+        Vector where = getCentroid(lastTile.vert(0),lastTile.vert(1),lastTile.vert(2),lastTile.vert(3));
+        Vector dir = yaw(VX(0,a*1.8f,0),OBS,0.5f*PI + lYaw);
+        where = add(where,dir);
+        Portal portal = new Portal(sub(where,VX(0,0,-200)), game);
+        elements.pushBack(portal);
+    }
+
+    private int tilesSinceSpeedup=0;
+
     public void generate(int n, int difficulty) {
       //  b *= max(1,difficulty*0.75);
         if (elements.isEmpty()) {
@@ -122,17 +141,17 @@ public class Generator {
         int step = 0;
         while (n > 0) {
             int diceRoll = randInt(0, 11);
-            if (diceRoll > 9 && n >= 17 && step > 1) {
-                int nSteps = randInt(16, min(n - 1, 32));
-                float dYaw = randFloatRanges(3, -PI / (1.3f * nSteps), -PI / (5 * nSteps), PI / (5 * nSteps), PI / (1.3f * nSteps));
+            if (diceRoll > 9 && n >= 17 && step > 1 && tilesSinceSpeedup > 12) {
+                int nSteps = randInt(16, min(n - 1, 37));
+                float dYaw = choice(0,randFloatRanges(3, -PI / (2.5f * nSteps), -PI / (5 * nSteps), PI / (5 * nSteps), PI / (2.5f * nSteps)));
                 float descent = choice(-500, -300, 400, 700);
-                float r = choice(1.35f, 1.5f);
+                float r = 1.425f;//choice(1.35f, 1.5f);
                 if(difficulty==2){
-                    r = choice(1.45f,1.6f);
+                    r = 1.55f;//choice(1.45f,1.6f);
                 }else if(difficulty==3){
-                    r = choice(1.55f,1.8f);
+                    r = 1.675f;//choice(1.55f,1.8f);
                 }else if(difficulty>3){
-                    r = choice(1.7f,2.0f);
+                    r = 1.8f;//choice(1.7f,2.0f);
                 }
                 b *= r;
                 int tilesPerPlatform = (int) choice(3, 4), tilesToDelete = randInt(0, tilesPerPlatform), total = tilesPerPlatform + tilesToDelete;
@@ -143,7 +162,7 @@ public class Generator {
                         //lastTile.color = Color.WHITE;
                         --n;
                         ++step;
-                        if (randInt(1, 22) == 2) {
+                        if (randInt(1, 17) == 2) {
                             addAddons();
                         }
                     } else {
@@ -158,27 +177,42 @@ public class Generator {
                 addTile();
                 --n;
                 ++step;
-            } else if (diceRoll > 5 && n >= 21 && step > 2) {
-                int nSteps = randInt(20, min(n - 1, 25));
+            } else if (diceRoll > 5 && n >= 20 && step > 2 && tilesSinceSpeedup > 4) {
+                int nSteps = randInt(20, min(n, 25));
                 float minr = 0.2f, maxr = 0.6f;
-                if (difficulty == 1) {
-                    minr = 0.4f;
-                    maxr = 0.75f;
-                } else if (difficulty == 2) {
-                    minr = 0.6f;
-                    maxr = 0.9f;
-                }
-                float r = randFloat(minr, maxr, 2);
-                b *= r;
+
+
                 int k = 0;
-                int which = randInt(0, 2);
-                float len;
-                if (which == 0) {
-                    len = randFloat(19,25,2) / nSteps;
-                } else {
-                    len = (PI / nSteps);
+                int which = randInt(0, 1);
+                if(tilesSinceSpeedup<12){
+                    which=0;
                 }
 
+                float len;
+
+                if (which == 0) {
+                    if (difficulty == 1) {
+                        minr = 0.4f;
+                        maxr = 0.6f;
+                    } else if (difficulty == 2) {
+                        minr = 0.6f;
+                        maxr = 0.75f;
+                    }
+                    len = randFloat(16,22,2) / nSteps;
+                } else {
+                    if (difficulty == 1) {
+                        minr = 0.175f;
+                        maxr = 0.3f;
+                    } else if (difficulty == 2) {
+                        minr = 0.3f;
+                        maxr = 0.5f;
+                    }
+                    nSteps = randInt(10, 16);
+                    len = (0.8f / nSteps);
+                }
+
+                float r = randFloat(minr, maxr, 2);
+                b *= r;
                 for (float i = 0; i < nSteps; ++i) {
                     if (which == 0) {
                         lPitch = (float) -Math.atan((f((i + 1) * len) - f(i * len)) / len);
@@ -188,37 +222,40 @@ public class Generator {
                     addTile();
                     if (which != 0) {
                         lastTile.retarded = true;
+                        lastTile.speedup = 1.125f + 1.5f*abs(lPitch/(0.5f*PI));
                     } else {
                         if (lastTile.isFrontHill()) {
-                            lastTile.speedup = true;
+                            lastTile.speedup = 1.05f + 1.25f*abs(lPitch/(0.5f*PI));
                         }
                     }
                     ++step;
                     --n;
                 }
+                tilesSinceSpeedup=0;
                 lPitch = 0;
-                addTile();
                 ++step;
-                --n;
                 b /= r;
-            } else if (diceRoll > 2 && n >= 6 && step > 2 && tilesSinceTurn > 10) {
+            } else if (diceRoll > 2 && n >= 6 && step > 2 && tilesSinceTurn > 8 && tilesSinceSpeedup > 12) {
                 int nSteps = randInt(6, min(n, 14));
                 float dYaw = randFloatRanges(3, -PI / (2.5f * nSteps), -PI / (5.5f * nSteps), PI / (5.5f * nSteps), PI / (2.5f * nSteps));
                 for (int i = 0; i < nSteps; ++i) {
                     lYaw += dYaw;
                     addTile();
-                    if (randInt(1, 12) == 2 && step > 10) {
+                    if (randInt(1, 8) == 2 && step > 10) {
                         addAddons();
                     }
                     ++step;
                     --n;
                 }
+                /*if(randInt(1,10)==1 && step>5){
+                        addPortal();
+                    }*/
                 tilesSinceTurn = 0;
             } else {
                 int nSteps = min(n, randInt(4, 8));
                 for (int i = 0; i < nSteps; ++i) {
                     addTile();
-                    if (randInt(1, 12) == 2 && step > 10) {
+                    if (randInt(1, 8) == 2 && step > 10) {
                         addAddons();
                     }
                     ++step;
@@ -258,7 +295,7 @@ public class Generator {
     }
 
     public static class Tile extends WorldElement {
-        public boolean speedup = false;
+        public float speedup = 1.0f;
         public boolean retarded = false;
 
         public Tile(Vector a, Vector b, Vector c, Vector d, GameView game) {
@@ -266,6 +303,7 @@ public class Generator {
                     VXS(a, b, c, d),
                     FCS(FC(game.getGenerator().tileColor, game.getGenerator().tileColor, 0, 1, 2, 3))
                     , game);
+            oneColorAndFace=true;
         }
 
         public boolean isFrontHill() {
@@ -283,7 +321,7 @@ public class Generator {
         @Override
         public void calculate() {
             super.calculate();
-            double s = min(3, -getSlope());
+            double s = min(10, -getSlope());
             double brightness_mul = min(1.5, 1 + s * s / 9.5);
             if (retarded) {
                 brightness_mul = min(1.5, 1 + s * s / 1.1);

@@ -52,6 +52,9 @@ public class Util {
     public static Vector VX(float x, float y, float z){
         return new Vector(x,y,z);
     }
+    public static Vector VX(double x, double y, double z){
+        return new Vector((float) x, (float) y, (float) z);
+    }
     public static Vector VCPY(Vector v){
         return VX(v.x,v.y,v.z);
     }
@@ -327,7 +330,7 @@ public class Util {
         public Vector cuboidMid;
         double a,b,c;  // dimensions: a - x axis, b - y, c - z
 
-        public Cuboid(Vector mid, int a, int b, int c) {
+        public Cuboid(Vector mid, float a, float b, float c) {
             super(new Vector[]{
                     VX(mid.x-a/2,mid.y-b/2,mid.z-c/2),  // 0
                     VX(mid.x+a/2,mid.y-b/2,mid.z-c/2),  // 1

@@ -6,6 +6,8 @@ import static com.example.game3d.engine3d.Object3D.loadFromFile;
 import static com.example.game3d.engine3d.Object3D.moveToScreen;
 import static com.example.game3d.engine3d.Object3D.project;
 import static com.example.game3d.engine3d.Util.GAMEFONT;
+import static com.example.game3d.engine3d.Util.OBS;
+import static com.example.game3d.engine3d.Util.PI;
 import static com.example.game3d.engine3d.Util.SCR_H;
 import static com.example.game3d.engine3d.Util.SCR_W;
 import static com.example.game3d.engine3d.Util.SCR_Y;
@@ -15,6 +17,7 @@ import static com.example.game3d.engine3d.Util.add;
 import static com.example.game3d.engine3d.Util.blue;
 import static com.example.game3d.engine3d.Util.green;
 import static com.example.game3d.engine3d.Util.multBrightness;
+import static com.example.game3d.engine3d.Util.pointAndPlanePosition;
 import static com.example.game3d.engine3d.Util.red;
 import static com.example.game3d.engine3d.Util.roundTo;
 
@@ -44,8 +47,8 @@ public class GameHUD {
     private Paint strokeP = new Paint(), fillP = new Paint(), paint =new Paint();
 
     private Path reservedPath = new Path();
-    private static Vector[] FEATHER_ICON_VERTS;
-    private static Face[] FEATHER_ICON_FACES;
+    private static Vector[] FEATHER_ICON_VERTS, BOTTLE_ICON_VERTS;
+    private static Face[] FEATHER_ICON_FACES, BOTTLE_ICON_FACES;
     private static final int MAX_FEATHERS = 64;
     private FixedMaxSizeDeque<Object3D> icons = new FixedMaxSizeDeque<>(MAX_FEATHERS);
 
@@ -53,6 +56,12 @@ public class GameHUD {
         Pair<Vector[], Face[]> data = loadFromFile("feather.obj", Color.CYAN, Color.CYAN, VX(0,1000,0), iconW, iconT, iconH, 0, 0, 0);
         FEATHER_ICON_VERTS = data.first;
         FEATHER_ICON_FACES = data.second;
+    }
+
+    public static void ADD_BOTTLE_ICON_ASSETS() throws IOException {
+        Pair<Vector[], Face[]> data = loadFromFile("vodka.obj", Color.rgb(255,0,255), Color.WHITE, VX(0,1000,0), iconW, iconW, iconH*0.9f, 0, -PI/2, 0);
+        BOTTLE_ICON_VERTS = data.first;
+        BOTTLE_ICON_FACES = data.second;
     }
 
 
@@ -81,7 +90,7 @@ public class GameHUD {
         }
     }*/
 
-    private Object3D arrow, iconFeather;
+    private Object3D arrow, iconFeather, iconBottle;
 
     public GameHUD(GameView gameView){
         this.game = gameView;
@@ -96,7 +105,20 @@ public class GameHUD {
                 is_obs = true;
             }
         };
-        iconFeather.move(VX(iconX - SCR_W / 2, 0, iconY - SCR_H / 2));
+        //iconFeather.move(VX(iconX - SCR_W / 2, 0, iconY - SCR_H / 2));
+
+        iconBottle = new Object3D(BOTTLE_ICON_VERTS, BOTTLE_ICON_FACES) {
+            @Override
+            protected void extraInit() {
+                facesSorted = true;
+                is_obs = true;
+            }
+            @Override
+            protected boolean faceSkipped(ObjectFace fc){
+                return pointAndPlanePosition(vertex(fc.inds[0]),vertex(fc.inds[1]),vertex(fc.inds[2]),OBS)==1;
+            }
+        };
+       // iconBottle.move(VX(10 + 2*iconX - SCR_W / 2, 0, iconY - SCR_H / 2));
         arrow=new Object3D(VXS(
                 VX(-iconW/4.0f,SCR_Y-iconT/2.0f, -iconH/2.0f), // 0
                 VX(iconW/4.0f,SCR_Y-iconT/2.0f,-iconH/2.0f),   // 1
@@ -273,15 +295,25 @@ public class GameHUD {
             icons.get(i).invalidate();
         }*/
         if(game.getPlayer().jumpsLeft>0){
-            iconFeather.draw(canvas);
+            iconFeather.drawWithOffset(canvas,VX(iconX - SCR_W / 2, 0, iconY - SCR_H / 2));
             iconFeather.yaw+=0.02f;
-            Vector pc = add(project(iconFeather.centroid()),moveToScreen);
-            drawText(canvas,""+game.getPlayer().jumpsLeft,(pc.x-1+iconW/2),(pc.z+iconH*0.4f),35 ,Color.WHITE);
+            Vector pc = add(VX(iconX - SCR_W / 2, 0, iconY - SCR_H / 2),add(project(iconFeather.centroid()),moveToScreen));
+            drawText(canvas,""+game.getPlayer().jumpsLeft,(pc.x-1+iconW/2),(pc.z+iconH*0.4f),42 ,Color.WHITE);
             //canvas.drawText((pc.x-1+iconW/2)+" "+(pc.z+iconH*0.4f),500,600,fillP);
             iconFeather.invalidate();
         }
+        if(game.getPlayer().boostTime>0){
+            iconBottle.drawWithOffset(canvas,VX(40 + 2*iconX - SCR_W / 2, 0, iconY - SCR_H / 2 - 15));
+            iconBottle.yaw+=0.02f;
+            Vector pc = add(VX(40 + 2*iconX - SCR_W / 2, 0, iconY - SCR_H / 2 - 15),add(project(iconBottle.centroid()),moveToScreen));
+           // drawText(canvas,""+game.getPlayer().boo,(pc.x-1+iconW/2),(pc.z+iconH*0.4f),35 ,Color.WHITE);
+            float wdt = iconW*1.5f * (float)(game.getPlayer().boostTime)/(float)(game.getPlayer().maxBoostTime);
+            fillRect(canvas,(pc.x-1-iconW*0.75f),(pc.z+iconH*0.5f)+15,(pc.x-1-iconW*0.75f)+wdt,(pc.z+iconH*0.5f)+30,Color.RED);
+            //canvas.drawText((pc.x-1+iconW/2)+" "+(pc.z+iconH*0.4f),500,600,fillP);
+            iconBottle.invalidate();
+        }
 
-        if(game.getPlayer().airTime>0){
+      /*  if(game.getPlayer().airTime>0){
             if(airTimeTime==0){
                 airTimeTime = System.nanoTime();
             }
@@ -290,7 +322,7 @@ public class GameHUD {
             }
         }else{
             airTimeTime=0;
-        }
+        }*/
 
 
        // drawDebug(canvas);

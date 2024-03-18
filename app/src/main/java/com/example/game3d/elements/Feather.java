@@ -28,7 +28,7 @@ public class Feather extends WorldElement {
     public static Vector[] FEATHER_VERTS;
     public static Face[] FEATHER_FACES;
 
-    public static void ADD_FEATHER_ASSET(){
+    public static void ADD_FEATHER_ASSETS(){
         try {
             Pair<Vector[], Face[]> data = loadFromFile("feather.obj",Color.CYAN,Color.CYAN,VX(0,0,0),FEATHER_SX,FEATHER_SY,FEATHER_SZ,0,0,0);
             Feather.FEATHER_VERTS = data.first;
@@ -77,12 +77,13 @@ public class Feather extends WorldElement {
     private Cuboid cuboid;
     @Override
     public void calculate() {
-        super.calculate();
         yaw+=0.04;
-        t=(t+1)%50;
-        dy = (float) (sin((float)(t)*0.1));
+        ++t;
+        dy = (float) (37.0f*sin((float)(t)*0.06f));
         move(VX( 0,  0, dy));
+        super.calculate();
+        move(VX( 0,  0, -dy));
         move(deathMove);
-        cuboid = new Cuboid(centroid(),FEATHER_SX,FEATHER_SX,FEATHER_SZ);
+        cuboid = new Cuboid(centroid(),FEATHER_SX*1.5f,FEATHER_SX*1.5f,FEATHER_SZ*1.25f);
     }
 }

@@ -14,6 +14,7 @@ import com.example.game3d.elements.Generator.Tile;
 import com.example.game3d.engine3d.Util.Cuboid;
 import static java.lang.Math.PI;
 import static java.lang.Math.abs;
+import static java.lang.Math.max;
 import static java.lang.Math.signum;
 import static java.lang.Math.sqrt;
 
@@ -31,10 +32,12 @@ public class Player extends Object3D {
     public float baseSpeed, currSpeed , expectedSpeed ;
     public boolean canJump, waitForJump;
     public float minJumpPower, jumpPower, strongJumpPower, maxJumpPower;
+    public final int maxBoostTime = 600;
+    public int boostTime;
     public Vector move;
     public int ct;
     public static final int PLR_SX = 84, PLR_SY = 296, PLR_SZ = 296;
-    public boolean pressingFalling = false;
+    public boolean pressingFalling = false, portalMagic = false;
     public int jumpsLeft ;
     public float speedupTime;
     public int airTime;
@@ -87,6 +90,8 @@ public class Player extends Object3D {
         ct=0;
         jumpsLeft = 0;
         airTime=0;
+        portalMagic = false;
+        boostTime = 0;
         this.game=game;
     }
 
@@ -106,8 +111,28 @@ public class Player extends Object3D {
                 roll = 0;
             }
         }
+        if(abs(baseSpeed-expectedSpeed)<1){
+            baseSpeed=expectedSpeed;
+        }
         if (baseSpeed < expectedSpeed) {
-            baseSpeed += 1.2;
+            if(portalMagic){
+                baseSpeed += 0.5;
+            }else {
+                baseSpeed += 1.2;
+            }
+        }else if(baseSpeed > expectedSpeed){
+            if(portalMagic){
+                baseSpeed -= 0.5;
+            }else {
+                baseSpeed -= 1.2;
+            }
+        }
+        if(boostTime>0){
+            baseSpeed = expectedSpeed*1.3f;
+            --boostTime;
+            if(boostTime==0){
+                jumpsLeft = max(0,jumpsLeft-1);
+            }
         }
     }
 
@@ -125,7 +150,7 @@ public class Player extends Object3D {
         float jp = jumpPower < strongJumpPower ? maxJumpPower * 0.3f : maxJumpPower;
         float k = (float) (sqrt(1 + jp / maxJumpPower) - 1);
         float j = expectedSpeed < 100 ? k * maxJumpPower * 0.75f + currSpeed : k * maxJumpPower * 0.9f + currSpeed*0.75f ;
-        move = VX(0, j * 0.7f, -j * 1.1f);
+        move = VX(0, j * 0.7f, -j * 1.3f);
         move = yaw(move, OBS, -CAM_YAW);
         waitForJump = false;
         jumpPower = 0;

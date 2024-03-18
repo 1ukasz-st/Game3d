@@ -22,9 +22,11 @@ import static com.example.game3d.engine3d.Util.sub;
 import static com.example.game3d.engine3d.Util.yaw;
 import static java.lang.Math.PI;
 import static java.lang.Math.abs;
+import static java.lang.Math.cos;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.signum;
+import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
 import android.content.Context;
@@ -43,6 +45,8 @@ import com.example.game3d.elements.GameHUD;
 import com.example.game3d.elements.Generator;
 import com.example.game3d.elements.Generator.Tile;
 import com.example.game3d.elements.Player;
+import com.example.game3d.elements.Portal;
+import com.example.game3d.elements.Potion;
 import com.example.game3d.engine3d.FixedMaxSizeDeque;
 import com.example.game3d.engine3d.Util;
 
@@ -50,61 +54,10 @@ import java.io.IOException;
 
 public class GameView extends SurfaceView {
 
-    private static final int MAX_ELEMENTS_PER_FRAME = 80;
+    private static final int MAX_ELEMENTS_PER_FRAME = 100;
     public static AssetManager ASSET_MANAGER = null;
     private final int maxTimeToColorChange = 1000;
     private final int maxBrightness = 75, minBrightness = 55;
-    Player player;
-    Paint p = new Paint();
-    Paint p2 = new Paint();
-    Path tilePath = new Path();
-    int difficulty = 0, tilesOptimized = 0;
-    private FixedMaxSizeDeque<Tile> tileQueue = new FixedMaxSizeDeque<>(MAX_ELEMENTS_PER_FRAME);
-    private FixedMaxSizeDeque<WorldElement> otherElementsQueue = new FixedMaxSizeDeque<>(MAX_ELEMENTS_PER_FRAME);
-
-    private class Task extends Thread{
-
-        private boolean running = false;
-        public synchronized void begin(){
-            running = true;
-        }
-        public synchronized boolean stillGoing(){
-            return running;
-        }
-        protected void execute(){
-
-        }
-        @Override
-        public void run(){
-            while(true){
-                if(running){
-                    execute();
-                    running = false;
-                    synchronized(GameView.this) {
-                        GameView.this.notifyAll();
-                    }
-                }
-            }
-        }
-    }
-    private class CalculateTask extends Task{
-        private int mod, off,size=0;
-        public CalculateTask(int mod, int off){
-            super();
-            this.mod = mod;
-            this.off = off;
-        }
-        public void setSize(int size){
-            this.size=size;
-        }
-        @Override
-        public void execute(){
-            for(int i=off;i<size;i+=mod){
-                gen.elements.get(i).calculate();
-            }
-        }
-    }
-
     private final boolean running = true;
     private final Thread drawThread = new Thread() {
         @Override
@@ -125,6 +78,13 @@ public class GameView extends SurfaceView {
             }
         }
     };
+    Player player;
+    Paint p = new Paint();
+    Paint p2 = new Paint();
+    Path tilePath = new Path();
+    int difficulty = 0, tilesOptimized = 0;
+    private final FixedMaxSizeDeque<Tile> tileQueue = new FixedMaxSizeDeque<>(MAX_ELEMENTS_PER_FRAME);
+    private final FixedMaxSizeDeque<WorldElement> otherElementsQueue = new FixedMaxSizeDeque<>(MAX_ELEMENTS_PER_FRAME);
     private Generator gen;
     private float resetRectSize = 0;
     private boolean resetting = false;
@@ -132,49 +92,51 @@ public class GameView extends SurfaceView {
     private GameHUD hud;
     private float endX, endY;
     private boolean touchReleased = true;
-
-    private CalculateTask evenTask, oddTask;
+    private final CalculateTask evenTask;
+    private final CalculateTask oddTask;
+    private int time = 0;
 
     public GameView(Context context) throws IOException {
         super(context);
         ASSET_MANAGER = getContext().getAssets();
-        Util.GAMEFONT = Typeface.createFromAsset(ASSET_MANAGER,"ncr.ttf");
-        Feather.ADD_FEATHER_ASSET();
+        Util.GAMEFONT = Typeface.createFromAsset(ASSET_MANAGER, "ncr.ttf");
+        Feather.ADD_FEATHER_ASSETS();
         GameHUD.ADD_FEATHER_ICON_ASSETS();
+        GameHUD.ADD_BOTTLE_ICON_ASSETS();
+        Portal.ADD_PORTAL_ASSETS();
+        Potion.ADD_POTION_ASSETS();
         reset();
-        evenTask = new CalculateTask(2,0);
-        oddTask = new CalculateTask(2,1);
+        evenTask = new CalculateTask(2, 0);
+        oddTask = new CalculateTask(2, 1);
         evenTask.start();
         oddTask.start();
         drawThread.start();
     }
 
-    private void prepareObjects(int elementsThisTime){
+    private void prepareObjects(int elementsThisTime) {
         player.calculate();
-            //long t0 = System.nanoTime();
-            evenTask.setSize(elementsThisTime);
-            oddTask.setSize(elementsThisTime);
-            evenTask.begin();
-            oddTask.begin();
-            try {
-                synchronized (this) {
-                    while (evenTask.stillGoing()) {
-                        wait();
-                    }
+        //long t0 = System.nanoTime();
+        evenTask.setSize(elementsThisTime);
+        oddTask.setSize(elementsThisTime);
+        evenTask.begin();
+        oddTask.begin();
+        try {
+            synchronized (this) {
+                while (evenTask.stillGoing()) {
+                    wait();
                 }
-                synchronized (this) {
-                    while (oddTask.stillGoing()) {
-                        wait();
-                    }
-                }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                System.exit(0);
             }
-       /*Log.i("Time taken by computations", String.valueOf((System.nanoTime()-t0)/10));*/
+            synchronized (this) {
+                while (oddTask.stillGoing()) {
+                    wait();
+                }
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            System.exit(0);
+        }
+        /*Log.i("Time taken by computations", String.valueOf((System.nanoTime()-t0)/10));*/
     }
-
-    private int time=0;
 
     private void reset() {
         resetting = false;
@@ -205,7 +167,8 @@ public class GameView extends SurfaceView {
             tile.faces[0].color = Color.YELLOW;
             flushTilePath(canvas);
             tile.draw(canvas);
-        }else*/ if (tile.centroid().y < MAX_Y) {
+        }else*/
+        if (tile.centroid().y < MAX_Y) {
             if (!tile.isHill() && !tile.slightlyOutOfScreen() && tile.centroid().y > 3000) {
                 ++tilesOptimized;
                 tilePath.moveTo(tile.pVertex(0).x, tile.pVertex(0).z);
@@ -257,25 +220,26 @@ public class GameView extends SurfaceView {
         prepareObjects(elementsThisTime);
 
         float maxZ = -1000000000.0f;
-        for(int i=0;i<elementsThisTime;++i){
+        for (int i = 0; i < elementsThisTime; ++i) {
             WorldElement we = gen.elements.get(i);
             if (we instanceof Tile) {
                 //if(sub(we.centroid(),player.centroid()).sqlen() < 3000*3000 && !((Tile)we).isHill()) {
-                maxZ = max(maxZ, we.vertex(0).z+600);
+                maxZ = max(maxZ, we.vertex(0).z + 600);
                 //  maxZ = max(maxZ,-pointAndPlanePosition(we.vertex(0),we.vertex(1),we.vertex(2),add(player.centroid(),VX(0,0,-1500))));
                 //}
+
                 tileQueue.pushBack((Tile) (we));
                 Vector a = we.vertex(0), b = we.vertex(1), c = we.vertex(2), d = we.vertex(3);
-                a.z=0;
-                b.z=0;
-                c.z=0;
-                d.z=0;
+                a.z = 0;
+                b.z = 0;
+                c.z = 0;
+                d.z = 0;
                 Vector pc = player.centroid();
-                pc.z=0;
-                if((isPointInTriangle(a,b,c,pc) || isPointInTriangle(a,d,c,pc)) && we.centroid().z-player.centroid().z < 800 && pointAndPlanePosition(we.vertex(0),we.vertex(1),we.vertex(2),player.centroid())==-1){
-                    if(player.tileBelow==null) {
+                pc.z = 0;
+                if ((isPointInTriangle(a, b, c, pc) || isPointInTriangle(a, d, c, pc)) && we.centroid().z - player.centroid().z < 1400 && pointAndPlanePosition(we.vertex(0), we.vertex(1), we.vertex(2), player.centroid()) == -1) {
+                    if (player.tileBelow == null) {
                         player.tileBelow = (Tile) (we);
-                    }else if( abs(add(player.centroid(),VX(0,500,0)).y-player.tileBelow.centroid().y) > abs(add(player.centroid(),VX(0,500,0)).y-we.centroid().y) ){
+                    } else if (abs(add(player.centroid(), VX(0, 500, 0)).y - player.tileBelow.centroid().y) > abs(add(player.centroid(), VX(0, 500, 0)).y - we.centroid().y)) {
                         player.tileBelow = (Tile) (we);
                     }
                 }
@@ -337,23 +301,28 @@ public class GameView extends SurfaceView {
             player.jumpPower=0;
         }
         if (((player.jumpsLeft > 0 && touchReleased && (player.tileBelow==null || player.move.z < 0)) || (player.chosenTile != null && (player.airTime > 40 || touchReleased))) && player.jumpPower > player.minJumpPower) {*/
-        if(touchReleased && player.jumpPower < player.minJumpPower){
-            player.jumpPower=0;
+        if ((touchReleased && player.jumpPower < player.minJumpPower && player.tileBelow == null)) {
+            player.jumpPower = max(0,player.jumpPower-0.5f);
         }
-        if(touchReleased && player.jumpPower>=player.minJumpPower && player.chosenTile!=null){
+        if (touchReleased && player.jumpPower >= player.minJumpPower && player.chosenTile != null) {
             player.jump(false);
-        }else if(!touchReleased && player.jumpPower>=player.minJumpPower && player.chosenTile!=null && player.move.z > 10){
+        } else if (!touchReleased && player.jumpPower >= player.minJumpPower && player.chosenTile != null && player.move.z > 20) {
             player.jump(false);
-        }
-        else if(touchReleased && player.jumpPower>=player.minJumpPower && player.chosenTile==null && player.tileBelow==null && player.jumpsLeft>0){
+        } else if (touchReleased && player.jumpPower >= player.minJumpPower && player.chosenTile == null && (player.tileBelow == null ||  player.tileBelow.centroid().z - player.centroid().z > 1000 || player.move.z < -20) && player.jumpsLeft > 0) {
             player.jump(true);
-        }  else {
+        } else {
+            if(touchReleased&&player.jumpPower>0 && player.tileBelow==null){
+                player.jumpPower =0;// max(0,player.jumpPower-2f);
+            }
             if (player.chosenTile == null) {
-                player.move.z += 3.15;
-                player.move.x *= 0.999995;
-                player.move.y *= 0.999995;
+
+                player.move.z += 3.2;
+                //    player.move.x *= 0.999995;
+                //   player.move.y *= 0.999995;
+                player.speedupTime = max(0.0f, player.speedupTime - 2);
             } else {
-                if (player.move.z > 20 && !player.chosenTile.isBackHill() && !player.chosenTile.speedup && !player.pressingFalling) {
+                player.portalMagic = false;
+                if (player.move.z > 35 && !player.chosenTile.isBackHill() && player.chosenTile.speedup==1.0f && !player.pressingFalling) {
                     float temp_z = player.move.z * (-0.65f);
                     player.move = VX(0, player.currSpeed, temp_z);
                 } else {
@@ -361,19 +330,23 @@ public class GameView extends SurfaceView {
                     if (player.chosenTile.isFrontHill()) {
                         player.currSpeed *= 1.0f - 2 * Math.atan(abs(player.chosenTile.getSlope())) / 3.141f;
                     }
-                    if (player.chosenTile.speedup) {
+                   if (player.chosenTile.speedup>1.0f) {
                         player.speedupTime += 1;
-                        player.currSpeed *= 1.2f + (player.speedupTime / 60) * 1.7f;
+                       // player.currSpeed *= 2.0f + (player.speedupTime / 30) * 1.7f;
                     } else {
-                        player.speedupTime = max(0.0f, player.speedupTime - 2);
+                        player.speedupTime = 0.0f;
                     }
+                    player.currSpeed *= player.chosenTile.speedup*1.1f + (player.speedupTime / 20);
                     player.move = VX(0, player.currSpeed, 0);
                     Vector par = player.chosenTile.getDirection(), per = player.chosenTile.getOtherDirection();
                     player.move.z = -player.currSpeed * (float) (Math.sqrt(par.sqlen())) * (per.x / (per.y * par.x - per.x * par.y)) * player.chosenTile.getSlope();
                     if (player.chosenTile.isFrontHill()) {
                         player.move.z -= 0.25f;
-                        if (player.chosenTile.retarded && player.currSpeed > 90) {
-                            player.move.z -= 0.5f;
+                        if (player.chosenTile.retarded) {
+                            player.move.z -= 2f;
+                            if(player.currSpeed > 90){
+                                player.move.z -= 0.5f;
+                            }
                         }
                         if (player.currSpeed > 110) {
                             player.move.z -= 2.25f;
@@ -403,7 +376,7 @@ public class GameView extends SurfaceView {
 
 
         while (!gen.elements.isEmpty()) {
-            if ( (gen.elements.getFirst().centroid().y < -1000 && gen.elements.getFirst().outOfScreen()) || gen.elements.getFirst() instanceof Feather) {
+            if ((gen.elements.getFirst().centroid().y < -1000 && gen.elements.getFirst().outOfScreen()) || gen.elements.getFirst() instanceof Feather) {
                 gen.elements.removeFirst();
                 --elementsThisTime;
             } else {
@@ -442,11 +415,11 @@ public class GameView extends SurfaceView {
                     break;
                 }
                 if (abs(dy) > 3 && abs(dx) < abs(dy) * 0.5) {
-                    player.jumpPower = max(0, min(player.maxJumpPower, player.jumpPower - dy * 0.05f - (signum(dy)) * ((float) (sqrt(player.jumpPower / player.maxJumpPower) * 22 * 0.14f))));
+                    player.jumpPower = max(0, min(player.maxJumpPower, player.jumpPower - dy * 0.05f - (signum(dy)) * ((float) (sqrt(player.jumpPower / player.maxJumpPower) * 22 * 0.17f))));
                 }
                 if (abs(dx) < 8 && dy > 10 && player.airTime > 9 && player.jumpPower == 0 && player.chosenTile == null) {
                     player.pressingFalling = true;
-                }else if (endY > SCR_H / 8 && abs(dy) < 50) {
+                } else if (endY > SCR_H / 8 && abs(dy) < 50) {
                     CAM_YAW += 0.85 * dx * PI / SCR_W;
                     double tmp = 0.7 * min(0.15, abs(3.0 * sqrt(abs(dx) / 1.50) * 2.0 * PI / SCR_W));
                     if (tmp > abs(player.yaw) || signum(player.yaw) != signum(dx)) {
@@ -474,6 +447,7 @@ public class GameView extends SurfaceView {
     public Generator getGenerator() {
         return gen;
     }
+
     public float getResetRectSize() {
         return resetRectSize;
     }
@@ -509,7 +483,8 @@ public class GameView extends SurfaceView {
     public int getDifficulty() {
         return difficulty;
     }
-    public int getTime(){
+
+    public int getTime() {
         return time;
     }
 
@@ -528,5 +503,58 @@ public class GameView extends SurfaceView {
 
     public int getTilesOptimized() {
         return tilesOptimized;
+    }
+
+    private class Task extends Thread {
+
+        private boolean running = false;
+
+        public synchronized void begin() {
+            running = true;
+        }
+
+        public synchronized boolean stillGoing() {
+            return running;
+        }
+
+        protected void execute() {
+
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                if (running) {
+                    execute();
+                    running = false;
+                    synchronized (GameView.this) {
+                        GameView.this.notifyAll();
+                    }
+                }
+            }
+        }
+    }
+
+    private class CalculateTask extends Task {
+        private final int mod;
+        private final int off;
+        private int size = 0;
+
+        public CalculateTask(int mod, int off) {
+            super();
+            this.mod = mod;
+            this.off = off;
+        }
+
+        public void setSize(int size) {
+            this.size = size;
+        }
+
+        @Override
+        public void execute() {
+            for (int i = off; i < size; i += mod) {
+                gen.elements.get(i).calculate();
+            }
+        }
     }
 }
