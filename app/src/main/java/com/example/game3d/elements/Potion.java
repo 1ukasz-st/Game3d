@@ -34,8 +34,8 @@ public class Potion extends WorldElement {
             throw new RuntimeException(e);
         }
     }
-    public Potion(float x, float y, float z, GameView game) {
-        super(POTION_VERTS, POTION_FACES,true,game);
+    public Potion(float x, float y, float z) {
+        super(POTION_VERTS, POTION_FACES,true);
         assert(POTION_FACES.length>0);
         move(VX(x,y,z));
     }

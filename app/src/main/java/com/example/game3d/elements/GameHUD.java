@@ -51,6 +51,7 @@ public class GameHUD {
     private static Face[] FEATHER_ICON_FACES, BOTTLE_ICON_FACES;
     private static final int MAX_FEATHERS = 64;
     private FixedMaxSizeDeque<Object3D> icons = new FixedMaxSizeDeque<>(MAX_FEATHERS);
+    private GearIcon gearIcon;
 
     public static void ADD_FEATHER_ICON_ASSETS() throws IOException {
         Pair<Vector[], Face[]> data = loadFromFile("feather.obj", Color.CYAN, Color.CYAN, VX(0,1000,0), iconW, iconT, iconH, 0, 0, 0);
@@ -63,32 +64,6 @@ public class GameHUD {
         BOTTLE_ICON_VERTS = data.first;
         BOTTLE_ICON_FACES = data.second;
     }
-
-
-    /*public void addFeather(){
-        icons.pushBack(new Object3D(FEATHER_ICON_VERTS, FEATHER_ICON_FACES) {
-            @Override
-            protected void extraInit() {
-                facesSorted = false;
-                oneColorAndFace = true;
-                is_obs = true;
-            }
-        });
-        icons.getLast().move(VX(iconX - SCR_W / 2, 0, iconY - SCR_H / 2));
-        iconX += iconW +30;
-        if(iconX >SCR_W){
-            iconX = 60;
-            iconY += iconH +30;
-        }
-    }*/
-   /* public void removeFeather(){
-        icons.removeLast();
-        iconX -= iconW +30;
-        if(iconX <=30){
-            iconX = 30;
-            iconY -= iconH +30;
-        }
-    }*/
 
     private Object3D arrow, iconFeather, iconBottle;
 
@@ -139,6 +114,8 @@ public class GameHUD {
             }
         };
         arrow.move(VX(SCR_W/2 - iconW - 20,0,-SCR_H/2 + iconY));
+
+        gearIcon = new GearIcon();
     }
     private void fillTriangle(Canvas canvas, float x1, float y1, float x2, float y2, float x3, float y3, int color){
         reservedPath.rewind();
@@ -326,6 +303,8 @@ public class GameHUD {
 
 
        // drawDebug(canvas);
+
+    //    gearIcon.drawWithOffset(canvas,VX(200,0,500));
 
 
     }

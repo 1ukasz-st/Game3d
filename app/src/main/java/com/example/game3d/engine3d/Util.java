@@ -24,6 +24,7 @@ public class Util {
     public static final Vector PLAYER = new Vector(0,800,450), OBS = new Vector(0.0f,0.0f,0.0f);
 
     public static Typeface GAMEFONT;
+    public static int DEFAULT_COLOR = Color.rgb(100,255,255);
 
     public static float PI = (float)(Math.PI);
 

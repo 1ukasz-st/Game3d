@@ -5,6 +5,7 @@ import static com.example.game3d.elements.Generator.MIN_TILES;
 import static com.example.game3d.elements.Generator.WorldElement;
 import static com.example.game3d.elements.Player.CAM_YAW;
 import static com.example.game3d.engine3d.Object3D.MAX_Y;
+import static com.example.game3d.engine3d.Util.DEFAULT_COLOR;
 import static com.example.game3d.engine3d.Util.OBS;
 import static com.example.game3d.engine3d.Util.SCR_H;
 import static com.example.game3d.engine3d.Util.SCR_W;
@@ -42,6 +43,7 @@ import android.view.SurfaceView;
 
 import com.example.game3d.elements.Feather;
 import com.example.game3d.elements.GameHUD;
+import com.example.game3d.elements.GearIcon;
 import com.example.game3d.elements.Generator;
 import com.example.game3d.elements.Generator.Tile;
 import com.example.game3d.elements.Player;
@@ -54,10 +56,10 @@ import java.io.IOException;
 
 public class GameView extends SurfaceView {
 
-    private static final int MAX_ELEMENTS_PER_FRAME = 100;
+    private static final int MAX_ELEMENTS_PER_FRAME = 120;
     public static AssetManager ASSET_MANAGER = null;
     private final int maxTimeToColorChange = 1000;
-    private final int maxBrightness = 75, minBrightness = 55;
+    private final int maxBrightness = 68, minBrightness = 55;
     private final boolean running = true;
     private final Thread drawThread = new Thread() {
         @Override
@@ -96,6 +98,12 @@ public class GameView extends SurfaceView {
     private final CalculateTask oddTask;
     private int time = 0;
 
+    private static int colorTheme = DEFAULT_COLOR;
+
+    public static int getColorTheme(){
+        return colorTheme;
+    }
+
     public GameView(Context context) throws IOException {
         super(context);
         ASSET_MANAGER = getContext().getAssets();
@@ -105,6 +113,7 @@ public class GameView extends SurfaceView {
         GameHUD.ADD_BOTTLE_ICON_ASSETS();
         Portal.ADD_PORTAL_ASSETS();
         Potion.ADD_POTION_ASSETS();
+        GearIcon.ADD_GEAR_ICON_ASSETS();
         reset();
         evenTask = new CalculateTask(2, 0);
         oddTask = new CalculateTask(2, 1);
@@ -113,7 +122,7 @@ public class GameView extends SurfaceView {
         drawThread.start();
     }
 
-    private void prepareObjects(int elementsThisTime) {
+    private void prepareObjects(int elementsThisTime) { // Using 2 threads turned out to be an optimization
         player.calculate();
         //long t0 = System.nanoTime();
         evenTask.setSize(elementsThisTime);
@@ -142,9 +151,9 @@ public class GameView extends SurfaceView {
         resetting = false;
         resetRectSize = 0;
         try {
-            player = new Player(this);
+            player = new Player();
             targetColor = adjustBrightness(randomDistantColor(Color.TRANSPARENT, minBrightness, maxBrightness), minBrightness, maxBrightness);
-            gen = new Generator(targetColor, this);
+            gen = new Generator(targetColor);
             timeToColorChange = maxTimeToColorChange;
             gen.generate(MAX_TILES, difficulty);
             p2.setStyle(Paint.Style.STROKE);
@@ -199,13 +208,13 @@ public class GameView extends SurfaceView {
         } else {
             --timeToColorChange;
         }
-        gen.tileColor = getColorCloser(gen.tileColor, targetColor);
-        gen.tileColor = getColorCloser(gen.tileColor, targetColor);
-        gen.tileColor = getColorCloser(gen.tileColor, targetColor);
-        if (!(getBrightness(targetColor) >= minBrightness && getBrightness(targetColor) <= maxBrightness)) {
+        colorTheme = getColorCloser(gen.tileColor, targetColor);
+        colorTheme = getColorCloser(gen.tileColor, targetColor);
+        colorTheme = getColorCloser(gen.tileColor, targetColor);
+      /*  if (!(getBrightness(targetColor) >= minBrightness && getBrightness(targetColor) <= maxBrightness)) {
             Log.i("BAD COLOR", "" + getBrightness(targetColor));
             System.exit(1);
-        }
+        }*/
 
         if (resetting) {
             resetRectSize -= (0.06 * resetRectSize + 9);
@@ -308,7 +317,7 @@ public class GameView extends SurfaceView {
             player.jump(false);
         } else if (!touchReleased && player.jumpPower >= player.minJumpPower && player.chosenTile != null && player.move.z > 20) {
             player.jump(false);
-        } else if (touchReleased && player.jumpPower >= player.minJumpPower && player.chosenTile == null && (player.tileBelow == null ||  player.tileBelow.centroid().z - player.centroid().z > 1000 || player.move.z < -20) && player.jumpsLeft > 0) {
+        } else if (touchReleased && player.jumpPower >= player.minJumpPower && player.chosenTile == null && (player.tileBelow == null ||  player.tileBelow.centroid().z - player.centroid().z > 1000 || player.move.z < 3) && player.jumpsLeft > 0) {
             player.jump(true);
         } else {
             if(touchReleased&&player.jumpPower>0 && player.tileBelow==null){
@@ -509,11 +518,11 @@ public class GameView extends SurfaceView {
 
         private boolean running = false;
 
-        public synchronized void begin() {
+        public void begin() {
             running = true;
         }
 
-        public synchronized boolean stillGoing() {
+        public boolean stillGoing() {
             return running;
         }
 
@@ -557,4 +566,6 @@ public class GameView extends SurfaceView {
             }
         }
     }
+
+
 }

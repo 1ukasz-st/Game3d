@@ -70,7 +70,7 @@ public class Player extends Object3D {
         }*/
         return pointAndPlanePosition(vertex(fc.inds[0]),vertex(fc.inds[1]),vertex(fc.inds[2]),OBS)==-1;
     }
-    public Player(GameView game) throws IOException {
+    public Player() throws IOException {
         super("opona.obj",Color.BLACK, Color.WHITE,PLAYER,PLR_SX,PLR_SY,PLR_SZ,(float)(PI/2.0),0.0f,0.0f);
         is_obs = true;
         CAM_YAW = 0.0f;
@@ -92,7 +92,6 @@ public class Player extends Object3D {
         airTime=0;
         portalMagic = false;
         boostTime = 0;
-        this.game=game;
     }
 
     @Override

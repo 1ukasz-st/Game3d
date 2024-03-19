@@ -44,8 +44,8 @@ public class Portal extends WorldElement {
         PORTAL_FACES[1] = FC(multBrightness(Color.rgb(255,0,255),0.35f),0,odd);
     }
 
-    public Portal(Vector midP, GameView game) {
-        super(PORTAL_VERTS,PORTAL_FACES,false,game);
+    public Portal(Vector midP) {
+        super(PORTAL_VERTS,PORTAL_FACES,false);
         oneColorAndFace=true;
         pitch = PI/2;
         move(midP);
@@ -60,7 +60,7 @@ public class Portal extends WorldElement {
         //}
         yaw+=0.025f;
         super.calculate();
-        cuboid = new Cuboid(centroid(),PORTAL_INNER_RAD,PORTAL_INNER_RAD,150+abs(game.getPlayer().move.z));
+        cuboid = new Cuboid(centroid(),PORTAL_INNER_RAD,PORTAL_INNER_RAD,150);
     }
 
     @Override

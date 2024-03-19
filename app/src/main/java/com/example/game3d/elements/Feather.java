@@ -37,8 +37,8 @@ public class Feather extends WorldElement {
             throw new RuntimeException(e);
         }
     }
-    public Feather(float x, float y, float z, GameView game) {
-        super(FEATHER_VERTS,FEATHER_FACES,false,game);
+    public Feather(float x, float y, float z) {
+        super(FEATHER_VERTS,FEATHER_FACES,false);
         assert(FEATHER_FACES.length>0);
         move(VX(x,y,z));
         pitch = 0.5f;
@@ -57,7 +57,6 @@ public class Feather extends WorldElement {
     @Override
     public void interactWithPlayer(Player player) {
         if (!dead()) {
-            //game.getHUD().addFeather();
             die();
             ++player.jumpsLeft;
         }
