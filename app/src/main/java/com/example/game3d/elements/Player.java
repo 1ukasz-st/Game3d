@@ -4,17 +4,28 @@ import static com.example.game3d.GameView.BASE_SCR_Y;
 import static com.example.game3d.GameView.SCR_Y;
 import static com.example.game3d.engine3d.Util.OBS;
 import static com.example.game3d.engine3d.Util.PLAYER;
+import static com.example.game3d.engine3d.Util.VCPY;
 import static com.example.game3d.engine3d.Util.VX;
+import static com.example.game3d.engine3d.Util.add;
+import static com.example.game3d.engine3d.Util.getCentroid;
+import static com.example.game3d.engine3d.Util.mult;
 import static com.example.game3d.engine3d.Util.pointAndPlanePosition;
+import static com.example.game3d.engine3d.Util.sub;
 import static com.example.game3d.engine3d.Util.yaw;
 import static java.lang.Math.PI;
 import static java.lang.Math.abs;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.lang.Math.signum;
 import static java.lang.Math.sqrt;
 
 import android.graphics.Color;
+import android.util.Log;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.game3d.GameView;
+import com.example.game3d.elements.interactables.Tile;
 import com.example.game3d.engine3d.Object3D;
 import com.example.game3d.engine3d.Util.Cuboid;
 import com.example.game3d.engine3d.Util.Vector;
@@ -46,6 +57,25 @@ public class Player extends Object3D {
     public Tile chosenTile = null, tileBelow = null;
     private boolean dead;
 
+    private float squishingTime=0;
+    private final float squishingTimeMax=0.3f*7;
+    private float squishingDelay = 0;
+    private final float squishingDelayMax = 7;
+
+    public void startSquishing(){
+        if(squishingDelay==0) {
+            float x = max(minJp,min(move.z,maxJp));
+            mink = minSq - (x-minJp)*(x-minJp)*(minSq-maxSq)/((maxJp-minJp)*(maxJp-minJp));
+            squishingTime = squishingTimeMax;
+            squishingDelay = squishingDelayMax;
+        }
+    }
+
+    private float minSq = 0.99f, maxSq = 0.961f;
+    public final float minJp = 27f, maxJp = 115f;
+    private float mink = 0.99f;
+    private Vector[] ORIGINAL_VERTS;
+
     public Player() throws IOException {
         super("opona.obj", Color.BLACK, Color.WHITE, PLAYER, PLR_SX, PLR_SY, PLR_SZ, (float) (PI / 2.0), 0.0f, 0.0f);
         is_obs = true;
@@ -56,6 +86,11 @@ public class Player extends Object3D {
         canJump = false;
         waitForJump = false;
         speedupTime = 0.0f;
+
+        ORIGINAL_VERTS = new Vector[verts.length];
+        for(int i=0;i<verts.length;++i){
+            ORIGINAL_VERTS[i] = VCPY(verts[i]);
+        }
         //  jumpWait = 0;mjumpMaxWait = 20;
         //  slowDownMaxTime = 70; slowDownTime = slowDownMaxTime;
 
@@ -132,6 +167,34 @@ public class Player extends Object3D {
                 --SCR_Y;
             }
         }
+        if(squishingTime>0){
+            squishingTime-=0.3f;
+       //     float mink = 0.976f;
+            float t = squishingTime/squishingTimeMax;
+            float k = (t-0.5f)*(t-0.5f)*(1.0f-mink)/0.25f + mink;
+           // Log.i("SCALE FACTOR",""+k);
+            Vector c = getCentroid(verts), c2 = getCentroid(ORIGINAL_VERTS);
+            for(int i=0;i<nVerts();++i){
+                Vector d = sub(ORIGINAL_VERTS[i],c2);
+                d.z*=k;
+                verts[i] = add(c,d);
+            }
+
+        }
+        if(squishingDelay>0){
+            --squishingDelay;
+        }
+       /* if(unSquishingTime>0){
+            --unSquishingTime;
+            float k = (float) (1.0f - 0.1f*sqrt((float)(unSquishingTimeMax - unSquishingTime)/(float)(unSquishingTimeMax)));
+           // Log.i("SCALE FACTOR",""+k);
+            Vector c = getCentroid(verts), c2 = getCentroid(ORIGINAL_VERTS);
+            for(int i=0;i<nVerts();++i){
+                Vector d = sub(ORIGINAL_VERTS[i],c2);
+                d.z*=k;
+                verts[i] = add(c,d);
+            }
+        }*/
     }
 
     public void die() {
@@ -154,6 +217,10 @@ public class Player extends Object3D {
     }
 
 
+    public void stopSquishing(){
+        squishingTime = 0;
+    }
+
     public void jump(boolean noFooting) {
         float jp = jumpPower < strongJumpPower ? maxJumpPower * 0.3f : maxJumpPower;
         float k = (float) (sqrt(1 + jp / maxJumpPower) - 1);
@@ -162,6 +229,7 @@ public class Player extends Object3D {
         move = yaw(move, OBS, -CAM_YAW);
         waitForJump = false;
         jumpPower = 0;
+        startSquishing();
         if (noFooting) {
             --jumpsLeft;
             featherCooldown = maxFeatherCooldown;

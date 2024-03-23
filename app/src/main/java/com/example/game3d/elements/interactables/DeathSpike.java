@@ -1,4 +1,4 @@
-package com.example.game3d.elements;
+package com.example.game3d.elements.interactables;
 
 import static com.example.game3d.GameView.getColorTheme;
 import static com.example.game3d.engine3d.Util.Cuboid;
@@ -6,11 +6,17 @@ import static com.example.game3d.engine3d.Util.DEFAULT_COLOR;
 import static com.example.game3d.engine3d.Util.OBS;
 import static com.example.game3d.engine3d.Util.VXS;
 import static com.example.game3d.engine3d.Util.Vector;
+import static com.example.game3d.engine3d.Util.add;
+import static com.example.game3d.engine3d.Util.mult;
 import static com.example.game3d.engine3d.Util.multBrightness;
 import static com.example.game3d.engine3d.Util.pointAndPlanePosition;
+import static com.example.game3d.engine3d.Util.sub;
 import static java.lang.Math.abs;
 
 import android.graphics.Color;
+
+import com.example.game3d.elements.Player;
+import com.example.game3d.elements.WorldElement;
 
 
 public class DeathSpike extends WorldElement {
@@ -53,6 +59,12 @@ public class DeathSpike extends WorldElement {
             return false;
         }
         return cuboid.intersectsCuboid(player.cuboid);
+    }
+
+    public Vector scaledV(int i){
+        Vector v = vertex(i);
+        Vector dist = sub(v,centroid());
+        return add(v,mult(dist,1.5f));
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.example.game3d;
 
 import static com.example.game3d.elements.Player.CAM_YAW;
 import static com.example.game3d.engine3d.Object3D.MAX_Y;
+import static com.example.game3d.engine3d.Object3D.fillPaint;
 import static com.example.game3d.engine3d.Util.DEFAULT_COLOR;
 import static com.example.game3d.engine3d.Util.OBS;
 import static com.example.game3d.engine3d.Util.SCR_H;
@@ -36,15 +37,15 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceView;
 
-import com.example.game3d.elements.DeathSpike;
-import com.example.game3d.elements.Feather;
+import com.example.game3d.elements.interactables.DeathSpike;
+import com.example.game3d.elements.interactables.Feather;
 import com.example.game3d.elements.GameHUD;
 import com.example.game3d.elements.GearIcon;
 import com.example.game3d.elements.Generator;
 import com.example.game3d.elements.Player;
-import com.example.game3d.elements.Portal;
-import com.example.game3d.elements.Potion;
-import com.example.game3d.elements.Tile;
+import com.example.game3d.elements.interactables.Portal;
+import com.example.game3d.elements.interactables.Potion;
+import com.example.game3d.elements.interactables.Tile;
 import com.example.game3d.elements.WorldElement;
 import com.example.game3d.engine3d.FixedMaxSizeDeque;
 import com.example.game3d.engine3d.Util;
@@ -57,7 +58,7 @@ public class GameView extends SurfaceView {
     public static final float DEFAULT_SCR_Y = 1000.0f;
     private static final int MAX_ELEMENTS_PER_FRAME = 80;
     public static float BASE_SCR_Y = DEFAULT_SCR_Y, SCR_Y = DEFAULT_SCR_Y;
-    public static float DEFAULT_CAM_SENSITIVITY = 0.85f;
+    public static float DEFAULT_CAM_SENSITIVITY = 0.75f;
     public static AssetManager ASSET_MANAGER = null;
     private static int colorTheme = DEFAULT_COLOR;
     private final int maxTimeToColorChange = 1000;
@@ -68,6 +69,7 @@ public class GameView extends SurfaceView {
     private final FixedMaxSizeDeque<WorldElement> otherElementsQueue = new FixedMaxSizeDeque<>(MAX_ELEMENTS_PER_FRAME);
     private final CalculateTask evenTask;
     private final CalculateTask oddTask;
+    private final int maxTimeTillPause = 2;
     public float camSensitivity = DEFAULT_CAM_SENSITIVITY;
     public FixedMaxSizeDeque<WorldElement> elements = new FixedMaxSizeDeque<>(MAX_TILES + MAX_ADDONS);
     Player player;
@@ -75,7 +77,10 @@ public class GameView extends SurfaceView {
     Paint p2 = new Paint();
     Path tilePath = new Path();
     int difficulty = 0, tilesOptimized = 0;
+   // int nr = 0;
     private boolean paused = false;
+
+    TestDrawing test;
     private final Thread drawThread = new Thread() {
         @Override
         public void run() {
@@ -118,7 +123,7 @@ public class GameView extends SurfaceView {
     private int time = 0;
     private boolean waitingToPause = false;
     private int timeTillPause = 0;
-    private final int maxTimeTillPause = 5;
+
     public GameView(Context context) throws IOException {
         super(context);
         context = getContext();
@@ -137,6 +142,7 @@ public class GameView extends SurfaceView {
         oddTask.start();
         applySettings();
         saveSettings();
+        test = new TestDrawing();
         drawThread.start();
     }
 
@@ -258,6 +264,7 @@ public class GameView extends SurfaceView {
             flushTilePath(canvas);
             tile.draw(canvas);
         }else*/
+      //  ++nr;
         if (tile.centroid().y < MAX_Y) {
             if (!tile.isHill() && !tile.slightlyOutOfScreen()) {
                 ++tilesOptimized;
@@ -269,12 +276,21 @@ public class GameView extends SurfaceView {
                 flushTilePath(canvas);
                 tile.draw(canvas);
             }
+            /*if (nr > 20) {
+                fillPaint.setColor(Color.WHITE);
+                fillPaint.setTextSize(40);
+                canvas.drawText("" + nr, tile.pVertex(0).x - 50, tile.pVertex(0).z, fillPaint);
+            }*/
         }
     }
 
     @Override
     public void onDraw(Canvas canvas) {
-
+       // nr = 0;
+      /*  test.draw(canvas);
+        if(true) {
+            return;
+        }*/
         tilesOptimized = 0;
         if (timeToColorChange == 0) {
             if (player.expectedSpeed < Player.MAX_SPEED) {
@@ -317,20 +333,14 @@ public class GameView extends SurfaceView {
         }
 
         int elementsThisTime = min(elements.size(), MAX_ELEMENTS_PER_FRAME);
-        prepareObjects(elementsThisTime);
 
+        prepareObjects(elementsThisTime);
 
         float maxZ = -1000000000.0f;
         for (int i = 0; i < elementsThisTime; ++i) {
             WorldElement we = elements.get(i);
-          /*  if(we.centroid().y > MAX_Y || we.outOfScreen()){
-                continue;
-            }*/
             if (we instanceof Tile) {
-                //if(sub(we.centroid(),player.centroid()).sqlen() < 3000*3000 && !((Tile)we).isHill()) {
                 maxZ = max(maxZ, we.vertex(0).z + 600);
-                //  maxZ = max(maxZ,-pointAndPlanePosition(we.vertex(0),we.vertex(1),we.vertex(2),add(player.centroid(),VX(0,0,-1500))));
-                //}
                 tileQueue.pushBack((Tile) (we));
                 Vector a = we.vertex(0), b = we.vertex(1), c = we.vertex(2), d = we.vertex(3);
                 a.z = 0;
@@ -339,7 +349,7 @@ public class GameView extends SurfaceView {
                 d.z = 0;
                 Vector pc = player.centroid();
                 pc.z = 0;
-                if ((isPointInTriangle(a, b, c, pc) || isPointInTriangle(a, d, c, pc)) && we.centroid().z - player.centroid().z < 1200 && pointAndPlanePosition(we.vertex(0), we.vertex(1), we.vertex(2), player.centroid()) == -1) {
+                if ((isPointInTriangle(a, b, c, pc) || isPointInTriangle(a, d, c, pc)) && we.centroid().z - player.centroid().z < 1000 && pointAndPlanePosition(we.vertex(0), we.vertex(1), we.vertex(2), player.centroid()) == -1) {
                     if (player.tileBelow == null) {
                         player.tileBelow = (Tile) (we);
                     } else if (abs(add(player.centroid(), VX(0, 500, 0)).y - player.tileBelow.centroid().y) > abs(add(player.centroid(), VX(0, 500, 0)).y - we.centroid().y)) {
@@ -349,7 +359,8 @@ public class GameView extends SurfaceView {
             } else {
                 otherElementsQueue.pushBack(we);
                 if (we instanceof DeathSpike) {
-                    Vector a = we.vertex(0), b = we.vertex(1), c = we.vertex(2), d = we.vertex(3);
+                    DeathSpike spike = (DeathSpike)we;
+                    Vector a = spike.scaledV(0), b = spike.scaledV(1), c = spike.scaledV(2), d = spike.scaledV(3);
                     a.z = 0;
                     b.z = 0;
                     c.z = 0;
@@ -374,37 +385,55 @@ public class GameView extends SurfaceView {
             }
         }
 
+        /*if( ( (player.tileBelow != null && player.tileBelow.centroid().z - player.centroid().z < 400)) && player.move.z > 47){
+            player.startSquishing();
+        }*/
+
+        int a = 0, b = 0;
+        /* Smart modification of Painters algorithm: All the tiles and all the non-tile elements are put in separate lists (which are both sorted as per Painter's algorithm).
+         Below the sorted list of ALL elements is obtained based on the two. */
         while (tileQueue.size() * otherElementsQueue.size() > 0) {
-            Tile tile = tileQueue.getLast();
-            WorldElement element = otherElementsQueue.getLast();
-            if (sub(tile.centroid(), element.centroid()).sqlen() > 800 * 800) {
-                if (tile.centroid().sqlen() < element.centroid().sqlen() * 0.8) {
-                    flushTilePath(canvas);
+            Tile tile = tileQueue.getLast(); // current tile on the queue (farthest away from the camera among all remaining tiles)
+            WorldElement element = otherElementsQueue.getLast(); // same but object is not a tile
+            if (sub(tile.centroid(), element.centroid()).sqlen() > 800 * 800) { // heuristics when objects are far away
+                if (tile.centroid().sqlen() < element.centroid().sqlen() * 0.8) { // tile is closer to camera than the other object so draw the object first
+                    flushTilePath(canvas); // draw all previous tiles (that are father away from the camera than the object)
                     element.draw(canvas);
                     otherElementsQueue.removeLast();
-                } else {
+                    ++b;
+                } else { // object is closer - draw tile first
                     drawTile(tile, canvas);
                     tileQueue.removeLast();
+                    ++a;
                 }
-            } else {
-                if (tile.centroid().z < -30) {
+            } else { // different heuristics when objects are close to each other
+                if (tile.centroid().z < -30) { // every element is placed right above some tile (see Generator.addAddons). So if the tile is above camera (0,0,0), the tile should occlude the object
                     flushTilePath(canvas);
                     element.draw(canvas);
                     otherElementsQueue.removeLast();
+                    ++b;
                 } else {
                     drawTile(tile, canvas);
                     tileQueue.removeLast();
+                    ++a;
                 }
             }
         }
         while (!tileQueue.isEmpty()) {
             drawTile(tileQueue.getLast(), canvas);
             tileQueue.removeLast();
+            ++a;
         }
         flushTilePath(canvas);
         while (!otherElementsQueue.isEmpty()) {
             otherElementsQueue.getLast().draw(canvas);
             otherElementsQueue.removeLast();
+            ++b;
+        }
+
+        if (!(a + b == elementsThisTime)) {
+            Log.e("BAD!!!!", "BAD");
+            System.exit(0);
         }
 
         if (maxZ < 0) {
@@ -439,7 +468,7 @@ public class GameView extends SurfaceView {
             player.jump(false);
         } else if (!touchReleased && player.jumpPower >= player.minJumpPower && player.chosenTile != null && player.move.z > 20) {
             player.jump(false);
-        } else if (touchReleased && player.jumpPower >= player.minJumpPower && player.chosenTile == null && (player.tileBelow == null || player.tileBelow.centroid().z - player.centroid().z > 1000 || player.move.z < 8 || player.hasSpikeBelow) && player.jumpsLeft > 0 && player.featherCooldown == 0) {
+        } else if (touchReleased && player.jumpPower >= player.minJumpPower && player.chosenTile == null && (player.tileBelow == null || player.tileBelow.centroid().z - player.centroid().z > 1000 || player.hasSpikeBelow) && player.jumpsLeft > 0 && player.featherCooldown == 0) {
             player.jump(true);
         } else {
             if (touchReleased && player.jumpPower > 0 && player.tileBelow == null) {
@@ -459,7 +488,10 @@ public class GameView extends SurfaceView {
 
             } else {
                 player.portalMagic = false;
-                if (player.move.z > 42 && !player.chosenTile.isHill() && player.chosenTile.speedup == 1.0f && !player.pressingFalling && abs(player.chosenTile.getSlope())<0.25f) {
+                if(player.move.z > player.minJp){
+                    player.startSquishing();
+                }
+                if (player.move.z > 37 && !player.chosenTile.isHill() && player.chosenTile.speedup == 1.0f && !player.pressingFalling && abs(player.chosenTile.getSlope()) < 0.25f) {
                     float temp_z = player.move.z * (-0.65f);
                     player.move = VX(0, player.currSpeed, temp_z);
                 } else {
@@ -473,7 +505,7 @@ public class GameView extends SurfaceView {
                     } else {
                         player.speedupTime = 0.0f;
                     }
-                    player.currSpeed *= player.chosenTile.speedup * 1.1f + (player.speedupTime / 20);
+                    player.currSpeed *= player.chosenTile.speedup * 1.3f + (player.speedupTime / 19);
                     player.move = VX(0, player.currSpeed, 0);
                     Vector par = player.chosenTile.getDirection(), per = player.chosenTile.getOtherDirection();
                     player.move.z = -player.currSpeed * (float) (Math.sqrt(par.sqlen())) * (per.x / (per.y * par.x - per.x * par.y)) * player.chosenTile.getSlope();
@@ -518,7 +550,7 @@ public class GameView extends SurfaceView {
         hud.draw(canvas);
 
         while (!elements.isEmpty()) {
-            if ((elements.getFirst().centroid().y < -500 && elements.getFirst().outOfScreen()) || elements.getFirst() instanceof Feather) {
+            if ((elements.getFirst().centroid().y < -500 && elements.getFirst().outOfScreen()) || elements.getFirst() instanceof Feather || elements.getFirst() instanceof Potion) {
                 elements.removeFirst();
                 --elementsThisTime;
             } else {
@@ -548,6 +580,7 @@ public class GameView extends SurfaceView {
                     if (settings) {
                         saveSettings();
                     }
+                    settings = !settings;
                     if (starting) {
                         wasStarting = true;
                         starting = false;
@@ -555,11 +588,12 @@ public class GameView extends SurfaceView {
                         wasStarting = false;
                         starting = true;
                     }
-                    settings = !settings;
-                    if (!settings) {
+                    if (!settings && !starting) {
                         //pauseGame();
                         startPausing();
                     }
+
+
                 }
                 if (isStarting() && hud.startRect.contains(endX, endY)) {
                     start();

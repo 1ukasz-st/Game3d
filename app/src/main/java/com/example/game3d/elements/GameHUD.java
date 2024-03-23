@@ -2,6 +2,10 @@ package com.example.game3d.elements;
 
 import static com.example.game3d.GameView.DEFAULT_SCR_Y;
 import static com.example.game3d.GameView.SCR_Y;
+import static com.example.game3d.engine3d.DrawUtil.drawCenteredText;
+import static com.example.game3d.engine3d.DrawUtil.drawRect;
+import static com.example.game3d.engine3d.DrawUtil.drawText;
+import static com.example.game3d.engine3d.DrawUtil.fillRect;
 import static com.example.game3d.engine3d.Object3D.FC;
 import static com.example.game3d.engine3d.Object3D.FCS;
 import static com.example.game3d.engine3d.Object3D.loadFromFile;
@@ -172,20 +176,6 @@ public class GameHUD {
 
     }
 
-    private void drawRect(Canvas canvas, float x1, float y1, float x2, float y2, int color) {
-        int lc = strokeP.getColor();
-        strokeP.setColor(color);
-        canvas.drawRect(x1, y1, x2, y2, strokeP);
-        strokeP.setColor(lc);
-    }
-
-    private void fillRect(Canvas canvas, float x1, float y1, float x2, float y2, int color) {
-        int lc = fillP.getColor();
-        fillP.setColor(color);
-        canvas.drawRect(x1, y1, x2, y2, fillP);
-        fillP.setColor(lc);
-    }
-
     private void drawBarWithMarkersOutline(Canvas canvas, float x0, float y0, float x1, float y1, float progress, int outlineColor, int fillColor, Float... markerPositions) {
 
         fillRect(canvas, x0, y0, x0 + progress, y1, fillColor);
@@ -229,41 +219,7 @@ public class GameHUD {
 
     }
 
-    public void drawText(Canvas canvas, String text, float x, float y, float fontSize, int color) {
-        int pc = paint.getColor();
-        float pts = paint.getTextSize();
-        Typeface ptf = paint.getTypeface();
-        paint.setColor(color);
-        paint.setTextSize(fontSize);
-        paint.setTypeface(GAMEFONT);
-        canvas.drawText(text, x, y, paint);
-        paint.setColor(pc);
-        paint.setTextSize(pts);
-        paint.setTypeface(ptf);
-    }
 
-    public float drawCenteredText(Canvas canvas, String text, float cx, float cy, float width, int color) {
-        int originalColor = paint.getColor();
-        float originalTextSize = paint.getTextSize();
-        Typeface originalTypeface = paint.getTypeface();
-        paint.setColor(color);
-        paint.setTypeface(GAMEFONT);
-        float testTextSize = 48f; // Starting with an arbitrary text size
-        paint.setTextSize(testTextSize);
-        android.graphics.Rect bounds = new android.graphics.Rect();
-        paint.getTextBounds(text, 0, text.length(), bounds);
-        float desiredTextSize = testTextSize * width / bounds.width();
-        paint.setTextSize(desiredTextSize);
-        paint.getTextBounds(text, 0, text.length(), bounds);
-        float textHeight = bounds.height();
-        float x = cx - bounds.width() / 2f;
-        float y = cy + textHeight / 2f;
-        canvas.drawText(text, x, y, paint);
-        paint.setColor(originalColor);
-        paint.setTextSize(originalTextSize);
-        paint.setTypeface(originalTypeface);
-        return textHeight;
-    }
 
     private void drawReset(Canvas canvas) {
         fillRect(canvas, 0, 0, game.getResetRectSize(), SCR_H, game.getTileColor());
@@ -340,8 +296,8 @@ public class GameHUD {
     }
 
     private void drawIntro(Canvas canvas) {
-        drawCenteredText(canvas, "GRA LUKASZA :)", SCR_W * 0.5f, 400, SCR_W * 0.95f, Color.WHITE);
-        drawCenteredText(canvas, "bottom text", SCR_W * 0.5f, 600, SCR_W * 0.5f, Color.WHITE);
+        drawCenteredText(canvas, "FOO BAR", SCR_W * 0.5f, 600, SCR_W * 0.95f, Color.WHITE);
+        drawCenteredText(canvas, "bottom text", SCR_W * 0.5f, 800, SCR_W * 0.5f, Color.WHITE);
 
         float h = drawCenteredText(canvas, "PLAY", SCR_W * 0.5f, SCR_H * 0.5f, 400, Color.WHITE);
         drawRect(canvas, SCR_W * 0.5f - 200 - 10, SCR_H * 0.5f - h * 0.5f - 10, SCR_W * 0.5f + 200 + 10, SCR_H * 0.5f + h * 0.5f + 10, Color.WHITE);

@@ -1,4 +1,4 @@
-package com.example.game3d.elements;
+package com.example.game3d.elements.interactables;
 
 import static com.example.game3d.elements.Player.CAM_YAW;
 import static com.example.game3d.engine3d.Util.OBS;
@@ -11,7 +11,8 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.lang.Math.sin;
 
-import com.example.game3d.GameView;
+import com.example.game3d.elements.Player;
+import com.example.game3d.elements.WorldElement;
 import com.example.game3d.engine3d.Util.Cuboid;
 
 import android.graphics.Color;
@@ -79,6 +80,12 @@ public class Feather extends WorldElement {
         dy = (float) (37.0f*sin((float)(t)*0.06f));
         move(VX( 0,  0, dy));
         super.calculate();
+        if(dead() && abs(centroid().y)>MAX_Y){
+            deathMove = VX(0,0,0);
+            for(Vector v : verts){
+                v.x = -100000;
+            }
+        }
         move(VX( 0,  0, -dy));
         move(deathMove);
         cuboid = new Cuboid(centroid(),FEATHER_SX*1.5f,FEATHER_SX*1.5f,FEATHER_SZ*1.25f);

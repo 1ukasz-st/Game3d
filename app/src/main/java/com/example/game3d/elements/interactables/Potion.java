@@ -1,11 +1,10 @@
-package com.example.game3d.elements;
+package com.example.game3d.elements.interactables;
 
 import static com.example.game3d.elements.Player.CAM_YAW;
 import static com.example.game3d.engine3d.Util.OBS;
 import static com.example.game3d.engine3d.Util.PI;
 import static com.example.game3d.engine3d.Util.VX;
 import static com.example.game3d.engine3d.Util.pointAndPlanePosition;
-import static com.example.game3d.engine3d.Util.randFloat;
 import static com.example.game3d.engine3d.Util.yaw;
 import static java.lang.Math.abs;
 import static java.lang.Math.sin;
@@ -13,7 +12,7 @@ import static java.lang.Math.sin;
 import android.graphics.Color;
 import android.util.Pair;
 
-import com.example.game3d.GameView;
+import com.example.game3d.elements.Player;
 import com.example.game3d.elements.WorldElement;
 import com.example.game3d.engine3d.Util.Cuboid;
 import com.example.game3d.engine3d.Util.Vector;
@@ -82,6 +81,12 @@ public class Potion extends WorldElement {
         dy = (float) (37.0f*sin((float)(t)*0.06f));
         move(VX( 0,  0, dy));
         super.calculate();
+        if(dead() && abs(centroid().y)>MAX_Y){
+            deathMove = VX(0,0,0);
+            for(Vector v : verts){
+                v.x = -100000;
+            }
+        }
         move(VX( 0,  0, -dy));
         move(deathMove);
         cuboid = new Cuboid(centroid(), POTION_SX*1.25f, POTION_SX*1.25f, POTION_SZ*1.1f);

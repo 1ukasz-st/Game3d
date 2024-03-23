@@ -1,4 +1,4 @@
-package com.example.game3d.elements;
+package com.example.game3d.elements.interactables;
 
 import static com.example.game3d.elements.Player.CAM_YAW;
 import static com.example.game3d.engine3d.Util.Cuboid;
@@ -17,6 +17,8 @@ import static java.lang.Math.sin;
 import android.graphics.Color;
 
 import com.example.game3d.GameView;
+import com.example.game3d.elements.Player;
+import com.example.game3d.elements.WorldElement;
 
 
 public class Portal extends WorldElement {

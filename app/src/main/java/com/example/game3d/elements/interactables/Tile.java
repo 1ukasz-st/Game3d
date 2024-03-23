@@ -1,4 +1,4 @@
-package com.example.game3d.elements;
+package com.example.game3d.elements.interactables;
 
 import static com.example.game3d.GameView.getColorTheme;
 import static com.example.game3d.elements.Player.PLR_SX;
@@ -18,6 +18,8 @@ import static java.lang.Math.min;
 
 import android.graphics.Color;
 
+import com.example.game3d.elements.Player;
+import com.example.game3d.elements.WorldElement;
 import com.example.game3d.engine3d.Util;
 
 public class Tile extends WorldElement {
