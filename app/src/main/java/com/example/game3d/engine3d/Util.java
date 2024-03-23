@@ -20,7 +20,6 @@ import java.util.Random;
 
 public class Util {
     public static float SCR_W, SCR_H;
-    public static final float SCR_Y = 1000.0f;
     public static final Vector PLAYER = new Vector(0,800,450), OBS = new Vector(0.0f,0.0f,0.0f);
 
     public static Typeface GAMEFONT;
@@ -468,5 +467,20 @@ public class Util {
         long mult = (long) (what*pow(10,digits));
         return (float)((float)(mult/pow(10,digits)));
     }
+
+    public static class Rect{
+        public final float x1,y1,x2,y2;
+        public Rect(float x1, float y1, float x2, float y2){
+            this.x1=x1;
+            this.y1=y1;
+            this.x2=x2;
+            this.y2=y2;
+        }
+        public boolean contains(float x, float y){
+            return x>=x1 && x<=x2 && y>=y1 && y<=y2;
+        }
+    }
+
+
 
 }

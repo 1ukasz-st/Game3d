@@ -1,44 +1,35 @@
 package com.example.game3d.elements;
 
-import static com.example.game3d.elements.Player.CAM_YAW;
 import static com.example.game3d.engine3d.Util.OBS;
 import static com.example.game3d.engine3d.Util.PI;
-import static com.example.game3d.engine3d.Util.SCR_Y;
+import static com.example.game3d.GameView.SCR_Y;
 import static com.example.game3d.engine3d.Util.VX;
 import static com.example.game3d.engine3d.Util.add;
-import static com.example.game3d.engine3d.Util.mult;
-import static com.example.game3d.engine3d.Util.pointAndPlanePosition;
-import static com.example.game3d.engine3d.Util.randFloat;
 import static com.example.game3d.engine3d.Util.roll;
-import static com.example.game3d.engine3d.Util.sub;
-import static com.example.game3d.engine3d.Util.yaw;
 import static java.lang.Math.abs;
 import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 
 import android.graphics.Color;
-import android.util.Pair;
 
-import com.example.game3d.GameView;
-import com.example.game3d.elements.Generator.WorldElement;
 import com.example.game3d.engine3d.Object3D;
-import com.example.game3d.engine3d.Util.Cuboid;
 import com.example.game3d.engine3d.Util.Vector;
 
-import java.io.IOException;
-
 public class GearIcon extends Object3D {
-    public static int OUTER_RAD = 115/4, INNER_RAD = 80/4, TEETH = 6;
-    private static float TOOTH_ANGLE = 3.0f*PI/(2.0f*TEETH), TOOTH_SPACE_ANGLE = TOOTH_ANGLE*1.0f/3.0f;
-    private static float TOOTH_LEN = (float) (2*INNER_RAD*sin(TOOTH_ANGLE*0.5f)), TOOTH_HEIGHT = OUTER_RAD-INNER_RAD;
+    public static float OUTER_RAD = 1.5f*(115.0f/4.0f), INNER_RAD = 1.5f*(80.0f/4.0f), AXIS_RAD =  1.5f*(50.0f/4.0f);
+    private static final int TEETH = 6;
+    private static final float TOOTH_ANGLE = 3.0f*PI/(2.0f*TEETH);
+    private static final float TOOTH_SPACE_ANGLE = TOOTH_ANGLE /3.0f;
+    private static final float TOOTH_LEN = (float) (2*INNER_RAD*sin(TOOTH_ANGLE*0.5f));
+    private static final float TOOTH_HEIGHT = OUTER_RAD-INNER_RAD;
     public static Vector[] VERTS;
     public static Face[] FACES;
 
     public static void ADD_GEAR_ICON_ASSETS(){
-        int nVerts = (TEETH*2*2 + TEETH*2);
+        int nVerts = (TEETH*2*2 + TEETH*2) + 16;
         VERTS = new Vector[nVerts];
-        int nFaces = 2 + TEETH*3;
-        FACES = new Face[1];
+        //int nFaces = 2 + TEETH*3;
+        FACES = new Face[2];
         float angle = 0.5f*PI - TOOTH_ANGLE/2;
         VERTS[0] = VX(INNER_RAD*cos(angle),SCR_Y,INNER_RAD*sin(angle));
         VERTS[3] = VX(INNER_RAD*cos(angle + TOOTH_ANGLE),SCR_Y,INNER_RAD*sin(angle + TOOTH_ANGLE));
@@ -53,20 +44,21 @@ public class GearIcon extends Object3D {
             }
             angle += TOOTH_ANGLE + TOOTH_SPACE_ANGLE;
         }
-        int[] indices0 = new int[nVerts];
+        int[] indices0 = new int[nVerts-16], indices1 = new int[16];
         for(int i=0;i< indices0.length;++i){
             indices0[i]=i;
         }
-        FACES[0] = FC(Color.BLACK,Color.WHITE,indices0);
+        for(int i=0;i< 16;++i){
+            indices1[i]=nVerts-16+i;
+            VERTS[indices1[i]] = VX(AXIS_RAD*cos(PI/8.0f * (float)(i+1)),SCR_Y,AXIS_RAD*sin(PI/8.0f * (float)(i+1)));
+        }
+        FACES[1] = FC(Color.BLACK,Color.WHITE,indices0);
+        FACES[0] = FC(Color.BLACK,Color.WHITE,indices1);
     }
     public GearIcon() {
-        super(VERTS, FACES,true);
-        assert(FACES.length>0);
+        super(VERTS, FACES,false);
+        is_obs=true;
+        oneColorAndFace=true;
     }
-
-  /*  @Override
-    protected boolean faceSkipped(ObjectFace fc){
-        return pointAndPlanePosition(vertex(fc.inds[0]),vertex(fc.inds[1]),vertex(fc.inds[2]),OBS)==1;
-    }*/
 
 }
