@@ -14,7 +14,7 @@ import android.graphics.Color;
 import android.util.Pair;
 
 import com.example.game3d.GameView;
-import com.example.game3d.elements.Generator.WorldElement;
+import com.example.game3d.elements.WorldElement;
 import com.example.game3d.engine3d.Util.Cuboid;
 import com.example.game3d.engine3d.Util.Vector;
 

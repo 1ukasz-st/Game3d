@@ -1,6 +1,5 @@
 package com.example.game3d.elements;
 
-import static com.example.game3d.elements.Generator.WorldElement;
 import static com.example.game3d.elements.Player.CAM_YAW;
 import static com.example.game3d.engine3d.Util.Cuboid;
 import static com.example.game3d.engine3d.Util.OBS;

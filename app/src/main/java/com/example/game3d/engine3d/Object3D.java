@@ -5,7 +5,7 @@ import static com.example.game3d.elements.Player.CAM_YAW;
 import static com.example.game3d.engine3d.Util.PLAYER;
 import static com.example.game3d.engine3d.Util.SCR_H;
 import static com.example.game3d.engine3d.Util.SCR_W;
-import static com.example.game3d.engine3d.Util.SCR_Y;
+import static com.example.game3d.GameView.SCR_Y;
 import static com.example.game3d.engine3d.Util.VC;
 import static com.example.game3d.engine3d.Util.VCPY;
 import static com.example.game3d.engine3d.Util.VX;
@@ -36,7 +36,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 
 public class Object3D {
-    public static float MAX_Y = 15000;
+    public static float MAX_Y = 20000;
     public static Paint strokePaint = new Paint();
     public static Paint fillPaint = new Paint();
     public static Vector moveToScreen = VX(0, 0, 0);
@@ -51,7 +51,6 @@ public class Object3D {
     protected boolean oneColorAndFace = false;
     int lastToDraw = -1;
     private Vector centerMass = null, rotatedCenter = null;
-    private float rectLeft, rectRight, rectTop, rectBottom;
 
     public Object3D(String filename, int color, int ecolor, Vector mid, float sx, float sy, float sz, float init_yaw, float init_pitch, float init_roll) throws IOException {
         Pair<Vector[], Face[]> data = loadFromFile(filename, color, ecolor, mid, sx, sy, sz, init_yaw, init_pitch, init_roll);
@@ -216,21 +215,6 @@ public class Object3D {
         return mult(vert, SCR_Y / vert.y);
     }
 
-    public float getRectLeft() {
-        return rectLeft;
-    }
-
-    public float getRectRight() {
-        return rectRight;
-    }
-
-    public float getRectTop() {
-        return rectTop;
-    }
-
-    public float getRectBottom() {
-        return rectBottom;
-    }
 
     public int nVerts() {
         return verts.length;
@@ -314,18 +298,10 @@ public class Object3D {
         if (centerMass == null) {
             centerMass = getCentroid(verts);
         }
-        rectLeft = 1e9f;
-        rectRight = -1e9f;
-        rectTop = 1e9f;
-        rectBottom = -1e9f;
 
         for (int i = 0; i < verts.length; ++i) {
             tVerts[i] = rotVert(verts[i]);
             Vector p = pVertex(i);
-            rectLeft = min(rectLeft, p.x);
-            rectRight = max(rectRight, p.x);
-            rectTop = min(rectTop, p.z);
-            rectBottom = max(rectBottom, p.z);
         }
         rotatedCenter = rotVert(centerMass);
         lastToDraw = partitionFaces();
