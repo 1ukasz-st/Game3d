@@ -459,7 +459,7 @@ public class GameView extends SurfaceView {
 
             } else {
                 player.portalMagic = false;
-                if (player.move.z > 42 && !player.chosenTile.isHill() && player.chosenTile.speedup == 1.0f && !player.pressingFalling) {
+                if (player.move.z > 42 && !player.chosenTile.isHill() && player.chosenTile.speedup == 1.0f && !player.pressingFalling && abs(player.chosenTile.getSlope())<0.25f) {
                     float temp_z = player.move.z * (-0.65f);
                     player.move = VX(0, player.currSpeed, temp_z);
                 } else {
